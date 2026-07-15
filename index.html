@@ -343,7 +343,7 @@
     <span class="close" onclick="closeModal('modal-add-exercise')">×</span>
     <h3>種目を追加</h3>
     <label class="field-label">種目名</label>
-    <input type="text" id="ex-name" placeholder="例: ベンチプレス" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;" oninput="onExNameInput()">
+    <input type="text" id="ex-title" placeholder="例: ベンチプレス" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;" oninput="onExNameInput()">
     <datalist id="ex-name-history"></datalist>
     <label class="field-label">種別</label>
     <div class="type-toggle" id="ex-type-toggle">
@@ -362,7 +362,7 @@
     <span class="close" onclick="closeModal('modal-add-plan')">×</span>
     <h3 id="add-plan-title">テンプレートを作成</h3>
     <label class="field-label">テンプレート名</label>
-    <input type="text" id="plan-name" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
+    <input type="text" id="plan-title" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
     <div id="plan-exercises"></div>
     <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
     <button class="primary" onclick="savePlan()">保存</button>
@@ -397,7 +397,7 @@
     <p class="field-label">マシン管理</p>
     <div class="card" style="padding:0;" id="machine-list"></div>
     <div class="card">
-      <input type="text" id="machine-new-name" placeholder="マシン名を入力" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;">
+      <input type="text" id="machine-new-title" placeholder="マシン名を入力" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;">
       <div class="type-toggle" id="machine-new-type-toggle">
         <button type="button" class="active" data-type="strength" onclick="setNewMachineType('strength')">筋トレ</button>
         <button type="button" data-type="reps" onclick="setNewMachineType('reps')">回数のみ</button>
@@ -598,7 +598,7 @@ function escapeHtml(s) {
 let exCurrentType = 'strength';
 
 function openAddExercise() {
-  document.getElementById('ex-name').value = '';
+  document.getElementById('ex-title').value = '';
   const history = document.getElementById('ex-name-history');
   const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
   history.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">').join('');
@@ -607,7 +607,7 @@ function openAddExercise() {
 }
 
 function onExNameInput() {
-  const name = document.getElementById('ex-name').value.trim();
+  const name = document.getElementById('ex-title').value.trim();
   const m = machines.find(m => m.name === name);
   if (m) setExType(m.type);
 }
@@ -657,7 +657,7 @@ function adjustWeight(btn, delta) {
 }
 
 function saveExercise() {
-  const name = document.getElementById('ex-name').value.trim();
+  const name = document.getElementById('ex-title').value.trim();
   if (!name) { alert('種目名を入力してください'); return; }
   const rows = document.querySelectorAll('#ex-sets .set-row');
   const sets = [];
@@ -1078,7 +1078,7 @@ function openAddPlan(planId) {
   editingPlanId = planId || null;
   const plan = editingPlanId ? plans.find(p => p.id === editingPlanId) : null;
   document.getElementById('add-plan-title').textContent = plan ? 'テンプレートを編集' : 'テンプレートを作成';
-  document.getElementById('plan-name').value = plan ? plan.name : '';
+  document.getElementById('plan-title').value = plan ? plan.name : '';
   document.getElementById('plan-exercises').innerHTML = '';
   const history = document.getElementById('ex-name-history');
   const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
@@ -1099,7 +1099,7 @@ function addPlanExerciseRow(prefill) {
   const type = prefill ? prefill.type : 'strength';
   row.dataset.type = type;
   row.innerHTML =
-    '<input type="text" class="plan-ex-name" placeholder="種目名" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
+    '<input type="text" class="plan-ex-title" placeholder="種目名" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
     '<div class="plan-ex-fields"></div>';
   wrap.appendChild(row);
   renderPlanExFields(row, type, prefill);
@@ -1140,12 +1140,12 @@ function renderPlanExFields(row, type, prefill) {
 }
 
 function savePlan() {
-  const name = document.getElementById('plan-name').value.trim();
+  const name = document.getElementById('plan-title').value.trim();
   if (!name) { alert('テンプレート名を入力してください'); return; }
   const rows = document.querySelectorAll('#plan-exercises .plan-ex-row');
   const exercises = [];
   rows.forEach(r => {
-    const exName = r.querySelector('.plan-ex-name').value.trim();
+    const exName = r.querySelector('.plan-ex-title').value.trim();
     if (!exName) return;
     const type = r.dataset.type;
     const setCount = parseInt(r.querySelector('.plan-ex-setcount').value, 10) || 1;
@@ -1588,7 +1588,7 @@ function typeLabel(type) {
 }
 
 function addMachine() {
-  const input = document.getElementById('machine-new-name');
+  const input = document.getElementById('machine-new-title');
   const name = input.value.trim();
   if (!name) { alert('マシン名を入力してください'); return; }
   machines.push({ id: uid(), name, type: newMachineType });
