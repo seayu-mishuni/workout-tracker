@@ -714,6 +714,39 @@ function renderDayDetail() {
     (logs.length === 0 ? '<div class="empty">この日の記録はありません</div>' : exerciseCardsHtml(logs));
 }
 
+function nthMondayOfMonth(year, month, n) {
+  const first = new Date(year, month - 1, 1);
+  const firstMonday = 1 + ((8 - first.getDay()) % 7);
+  return firstMonday + (n - 1) * 7;
+}
+function vernalEquinoxDay(year) {
+  return Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+}
+function autumnalEquinoxDay(year) {
+  return Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+}
+const FIXED_HOLIDAYS = { '1-1':1, '2-11':1, '2-23':1, '4-29':1, '5-3':1, '5-4':1, '5-5':1, '8-11':1, '11-3':1, '11-23':1 };
+function isJapaneseHoliday(year, month, day) {
+  if (FIXED_HOLIDAYS[month + '-' + day]) return true;
+  if (month === 1 && day === nthMondayOfMonth(year, 1, 2)) return true;
+  if (month === 7 && day === nthMondayOfMonth(year, 7, 3)) return true;
+  if (month === 9 && day === nthMondayOfMonth(year, 9, 3)) return true;
+  if (month === 10 && day === nthMondayOfMonth(year, 10, 2)) return true;
+  if (month === 3 && day === vernalEquinoxDay(year)) return true;
+  if (month === 9 && day === autumnalEquinoxDay(year)) return true;
+  return false;
+}
+function isHolidayOrSubstitute(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const year = d.getFullYear(), month = d.getMonth() + 1, day = d.getDate();
+  if (isJapaneseHoliday(year, month, day)) return true;
+  if (d.getDay() === 1) {
+    const prev = new Date(d); prev.setDate(prev.getDate() - 1);
+    if (prev.getDay() === 0 && isJapaneseHoliday(prev.getFullYear(), prev.getMonth() + 1, prev.getDate())) return true;
+  }
+  return false;
+}
+
 function renderResultsCalendar() {
   const [y, m] = calendarViewMonth.split('-').map(Number);
   const firstWeekday = new Date(y, m - 1, 1).getDay();
@@ -729,16 +762,26 @@ function renderResultsCalendar() {
 
   const dow = ['日','月','火','水','木','金','土'];
   let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">' +
-    dow.map(d => '<div style="text-align:center;font-size:12px;color:var(--text-muted);">' + d + '</div>').join('') +
+    dow.map((d, i) => '<div style="text-align:center;font-size:12px;color:' + (i === 0 ? 'var(--coral)' : i === 6 ? 'var(--blue-text)' : 'var(--text-muted)') + ';">' + d + '</div>').join('') +
     '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
 
   for (let i = 0; i < firstWeekday; i++) html += '<div></div>';
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const weekday = new Date(y, m - 1, day).getDay();
     const count = countsByDay[dateStr] || 0;
     const level = count === 0 ? 0 : count <= 2 ? 1 : 2;
     const bg = level === 0 ? 'var(--bg)' : level === 1 ? 'var(--accent-bg)' : 'var(--accent)';
-    const fg = level === 2 ? 'var(--accent-on)' : level === 1 ? 'var(--accent-text)' : 'var(--text-muted)';
+    let fg;
+    if (level > 0) {
+      fg = level === 2 ? 'var(--accent-on)' : 'var(--accent-text)';
+    } else if (weekday === 0 || isHolidayOrSubstitute(dateStr)) {
+      fg = 'var(--coral)';
+    } else if (weekday === 6) {
+      fg = 'var(--blue-text)';
+    } else {
+      fg = 'var(--text-muted)';
+    }
     const border = dateStr === selectedResultDate ? '2px solid var(--accent)' : (dateStr === today ? '1px solid var(--border-strong)' : 'none');
     html += '<div onclick="selectResultDay(\'' + dateStr + '\')" style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + '</div>';
   }
@@ -1458,6 +1501,7 @@ function recordCurrentSet() {
 
 function nextSet() {
   recordCurrentSet();
+  const finishedName = activeRun.queue[activeRun.currentIndex].name;
   activeRun.doneIndices.push(activeRun.currentIndex);
   activeRun.timerRemaining = activeRun.timerTotal;
   activeRun.timerRunning = false;
@@ -1467,8 +1511,13 @@ function nextSet() {
   if (remaining.length === 0) {
     activeRun.currentIndex = -1;
   } else {
-    const remainingNames = [...new Set(remaining.map(r => r.item.name))];
-    activeRun.currentIndex = remainingNames.length === 1 ? remaining[0].i : null;
+    const sameExercise = remaining.find(r => r.item.name === finishedName);
+    if (sameExercise) {
+      activeRun.currentIndex = sameExercise.i;
+    } else {
+      const remainingNames = [...new Set(remaining.map(r => r.item.name))];
+      activeRun.currentIndex = remainingNames.length === 1 ? remaining[0].i : null;
+    }
   }
   saveActiveRun();
   renderPlanRun();
