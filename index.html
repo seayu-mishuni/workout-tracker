@@ -206,14 +206,14 @@
   <header>
     <div class="titles">
       <p id="header-date"></p>
-      <p id="header-title">記録</p>
+      <p id="header-title">進捗</p>
     </div>
     <button class="icon-btn" onclick="openSettings()">⚙</button>
   </header>
 
   <main>
 
-    <section id="screen-record" class="screen active">
+    <section id="screen-record" class="screen">
       <div class="card">
         <div class="row">
           <div class="stat"><p>総ボリューム</p><p id="rec-volume">0<span class="unit">kg</span></p></div>
@@ -224,7 +224,7 @@
       <button class="primary" onclick="openAddExercise()">＋ 種目を追加</button>
     </section>
 
-    <section id="screen-progress" class="screen">
+    <section id="screen-progress" class="screen active">
       <div class="seg">
         <button id="prog-view-exercise" onclick="setProgView('exercise')">種目別</button>
         <button id="prog-view-daily" class="active" onclick="setProgView('daily')">日別</button>
@@ -321,10 +321,10 @@
 
   <nav>
     <div class="inner">
-      <div class="tab" data-screen="progress" onclick="showScreen('progress')">
+      <div class="tab active" data-screen="progress" onclick="showScreen('progress')">
         <span class="ic">📈</span><p>進捗</p>
       </div>
-      <div class="tab active" data-screen="record" onclick="showScreen('record')">
+      <div class="tab" data-screen="record" onclick="showScreen('record')">
         <span class="ic">🏋</span><p>記録</p>
       </div>
       <div class="tab" data-screen="body" onclick="showScreen('body')">
@@ -1479,7 +1479,7 @@ function importData(event) {
 
 function renderAll() {
   renderRecord();
-  renderProgress();
+  if (progViewMode === 'daily') renderProgressDaily(); else renderProgress();
   renderBody();
   renderPlanScreen();
 }
