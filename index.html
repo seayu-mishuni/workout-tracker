@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ワークアウト">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ワークアウト管理</title>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --border: #ece6da;
+    --border-strong: #d8cfbd;
+    --text: #2b2622;
+    --text-secondary: #756e63;
+    --text-muted: #a39c8e;
+    --accent: #5fc22d;
+    --accent-on: #ffffff;
+    --accent-bg: #e3f5d8;
+    --accent-text: #3a7d1a;
+    --green: #17a673;
+    --green-bg: #ddf5ea;
+    --green-text: #0a6b47;
+    --purple: #7c5cff;
+    --coral: #d85a30;
+    --amber: #ba7517;
+    --amber-bg: #faeeda;
+    --blue-bg: #dcefff;
+    --blue-text: #0a5bab;
+    --purple-bg: #ece6ff;
+    --purple-text: #5b3fd6;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161b;
+      --card: #242229;
+      --border: #37343c;
+      --border-strong: #4a4650;
+      --text: #f5f1eb;
+      --text-secondary: #ada79e;
+      --text-muted: #837d75;
+      --accent: #7ed94a;
+      --accent-on: #10230a;
+      --accent-bg: #223a16;
+      --accent-text: #a8ef82;
+      --green: #4ed6a3;
+      --green-bg: #0e3d2d;
+      --green-text: #8fe8c4;
+      --purple: #a693ff;
+      --coral: #f0997b;
+      --amber: #f0997b;
+      --amber-bg: #412402;
+      --blue-bg: #0d3457;
+      --blue-text: #8ec4f7;
+      --purple-bg: #2e2657;
+      --purple-text: #cabfff;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    height: 100%;
+    overscroll-behavior-y: none;
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 10px;
+  }
+  header .titles p:first-child { margin: 0; font-size: 11px; color: var(--text-muted); }
+  header .titles p:last-child { margin: 2px 0 0; font-size: 20px; font-weight: 600; }
+  header button.icon-btn {
+    background: none; border: none; padding: 8px; color: var(--text-secondary);
+    font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  main { flex: 1; padding: 0 16px 24px; }
+  .card {
+    background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius);
+    padding: 14px; margin-bottom: 12px;
+  }
+  .row { display: flex; gap: 10px; }
+  .stat {
+    flex: 1; background: var(--bg); border-radius: 8px; padding: 10px 12px;
+  }
+  .stat p:first-child { margin: 0; font-size: 11px; color: var(--text-secondary); }
+  .stat p:last-child { margin: 3px 0 0; font-size: 17px; font-weight: 600; }
+  .stat .unit { font-size: 11px; font-weight: 400; }
+  input, select {
+    width: 100%; height: 38px; border: 0.5px solid var(--border-strong); border-radius: 8px;
+    background: var(--card); color: var(--text); font-size: 15px; padding: 0 10px;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  label.field-label { font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  button.primary {
+    background: var(--accent); color: var(--accent-on); border: none; border-radius: 8px;
+    padding: 11px; font-size: 14px; font-weight: 600; width: 100%; cursor: pointer;
+  }
+  button.secondary {
+    background: none; border: 0.5px solid var(--border-strong); color: var(--text);
+    border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 500; width: 100%; cursor: pointer;
+  }
+  button.ghost {
+    background: none; border: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; padding: 6px;
+  }
+  .exercise-card {
+    border: 0.5px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .exercise-card .head { display: flex; justify-content: space-between; align-items: center; }
+  .exercise-card .name { font-size: 14px; font-weight: 600; }
+  .badge {
+    font-size: 11px; background: var(--green-bg); color: var(--green-text);
+    padding: 2px 9px; border-radius: 10px; white-space: nowrap;
+  }
+  .badge-cardio { background: var(--blue-bg); color: var(--blue-text); }
+  .badge-reps { background: var(--purple-bg); color: var(--purple-text); }
+  .machine-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .machine-row:last-child { border-bottom: none; }
+  .machine-row .mname { flex: 1; font-size: 13px; }
+  .type-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+  .type-toggle button {
+    flex: 1; padding: 8px; font-size: 12px; border-radius: 8px; border: 0.5px solid var(--border-strong);
+    background: none; color: var(--text-secondary); cursor: pointer;
+  }
+  .type-toggle button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
+  .exercise-card .sets { margin: 6px 0 0; font-size: 12px; color: var(--text-secondary); }
+  .exercise-card .del { color: var(--coral); font-size: 12px; float: right; cursor: pointer; }
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--card); border-top: 0.5px solid var(--border);
+    display: flex; justify-content: center;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 10;
+  }
+  nav .inner { display: flex; width: 100%; max-width: 480px; }
+  nav .tab {
+    flex: 1; text-align: center; padding: 8px 0; color: var(--text-muted); cursor: pointer;
+  }
+  nav .tab.active { color: var(--accent); }
+  nav .tab .ic { font-size: 20px; display: block; }
+  nav .tab p { margin: 2px 0 0; font-size: 10px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .empty {
+    text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px;
+  }
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    align-items: flex-end; justify-content: center; z-index: 100;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal-sheet {
+    background: var(--card); width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;
+    padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal-sheet h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+  .modal-sheet .close { float: right; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+  .set-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .set-row span { font-size: 12px; color: var(--text-muted); width: 46px; flex-shrink: 0; }
+  .stepper { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+  .stepper input { text-align: center; }
+  .step-btn {
+    width: 32px; height: 32px; flex-shrink: 0; padding: 0; border-radius: 8px;
+    border: 0.5px solid var(--border-strong); background: var(--card); color: var(--text);
+    font-size: 16px; font-weight: 600; cursor: pointer; line-height: 1;
+  }
+  .step-btn:active { background: var(--bg); }
+  .list-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 4px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .lt { flex: 1; }
+  .list-item .lt p:first-child { margin: 0; font-size: 13px; font-weight: 500; }
+  .list-item .lt p:last-child { margin: 1px 0 0; font-size: 11px; color: var(--text-muted); }
+  .warn-box {
+    background: var(--amber-bg); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: var(--amber);
+    line-height: 1.5;
+  }
+  .timer-circle { text-align: center; margin: 6px 0; }
+  .seg { display: flex; gap: 8px; margin-bottom: 12px; }
+  .seg button { flex: 1; padding: 8px; font-size: 12px; border-radius: 8px; border: 0.5px solid var(--border-strong); background: none; color: var(--text-secondary); }
+  .seg button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="titles">
+      <p id="header-date"></p>
+      <p id="header-title">記録</p>
+    </div>
+    <button class="icon-btn" onclick="openSettings()">⚙</button>
+  </header>
+
+  <main>
+
+    <section id="screen-record" class="screen active">
+      <div class="card">
+        <div class="row">
+          <div class="stat"><p>総ボリューム</p><p id="rec-volume">0<span class="unit">kg</span></p></div>
+          <div class="stat"><p>セット数</p><p id="rec-sets">0</p></div>
+        </div>
+      </div>
+      <div id="rec-list"></div>
+      <button class="primary" onclick="openAddExercise()">＋ 種目を追加</button>
+    </section>
+
+    <section id="screen-progress" class="screen">
+      <div class="seg">
+        <button id="prog-view-exercise" onclick="setProgView('exercise')">種目別</button>
+        <button id="prog-view-daily" class="active" onclick="setProgView('daily')">日別</button>
+      </div>
+
+      <div id="prog-panel-exercise" style="display:none;">
+        <div class="card">
+          <label class="field-label">種目を選択</label>
+          <select id="prog-exercise" onchange="renderProgress()"></select>
+        </div>
+        <div class="card">
+          <p class="field-label" style="margin-bottom:8px;" id="prog-chart-label">最大重量の推移</p>
+          <div id="prog-chart"></div>
+        </div>
+        <div class="card">
+          <p class="field-label" style="margin-bottom:8px;" id="prog-bar-label">週間ボリューム</p>
+          <div id="prog-bar-chart"></div>
+        </div>
+        <div class="row">
+          <div class="stat"><p>今月の実施回数</p><p id="prog-count">0回</p></div>
+          <div class="stat"><p id="prog-best-label">自己ベスト</p><p id="prog-best">-</p></div>
+        </div>
+      </div>
+
+      <div id="prog-panel-daily">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <button class="ghost" onclick="shiftCalendarMonth(-1)">‹ 前月</button>
+            <p id="prog-calendar-label" style="font-weight:600;font-size:14px;margin:0;"></p>
+            <button class="ghost" onclick="shiftCalendarMonth(1)">翌月 ›</button>
+          </div>
+          <div id="prog-calendar"></div>
+          <div class="row" style="margin-top:12px;">
+            <div class="stat"><p>運動した日数</p><p id="prog-month-days">0日</p></div>
+            <div class="stat"><p>合計セット数</p><p id="prog-month-sets">0</p></div>
+          </div>
+        </div>
+        <div class="card">
+          <label class="field-label">日付を選択</label>
+          <input type="date" id="prog-daily-date" onchange="onDailyDateChange()">
+        </div>
+        <div class="card">
+          <div class="row" id="prog-daily-summary"></div>
+        </div>
+        <div id="prog-daily-list"></div>
+      </div>
+    </section>
+
+    <section id="screen-body" class="screen">
+      <div class="row" style="margin-bottom:12px;">
+        <div class="stat">
+          <p>体重</p><p id="body-weight-latest">-<span class="unit">kg</span></p>
+          <p id="body-weight-diff" style="font-size:11px;margin-top:2px;"></p>
+        </div>
+        <div class="stat">
+          <p>体脂肪率</p><p id="body-fat-latest">-<span class="unit">%</span></p>
+          <p id="body-fat-diff" style="font-size:11px;margin-top:2px;"></p>
+        </div>
+      </div>
+      <div class="card">
+        <label class="field-label">今日の記録を入力</label>
+        <div class="row" style="margin-bottom:8px;">
+          <input type="number" step="0.1" id="body-weight-input" placeholder="体重 kg">
+          <input type="number" step="0.1" id="body-fat-input" placeholder="体脂肪率 %">
+        </div>
+        <button class="primary" onclick="saveBodyLog()">保存</button>
+      </div>
+      <div class="card">
+        <div class="seg">
+          <button class="active" data-range="30" onclick="setBodyRange(30,this)">1ヶ月</button>
+          <button data-range="90" onclick="setBodyRange(90,this)">3ヶ月</button>
+          <button data-range="365" onclick="setBodyRange(365,this)">1年</button>
+        </div>
+        <div id="body-chart"></div>
+      </div>
+      <div class="row">
+        <div class="stat"><p>月初から</p><p id="body-month-diff">-</p></div>
+        <div class="stat"><p>除脂肪体重</p><p id="body-lean">-<span class="unit">kg</span></p></div>
+      </div>
+    </section>
+
+    <section id="screen-plan" class="screen">
+      <div id="plan-list-view">
+        <p class="field-label">予定</p>
+        <div id="schedule-list"></div>
+        <p class="field-label" style="margin-top:4px;">マイプラン</p>
+        <div id="plan-list"></div>
+        <button class="primary" onclick="openAddPlan()">＋ プランを作成</button>
+      </div>
+      <div id="plan-run-view" style="display:none;"></div>
+    </section>
+
+  </main>
+
+  <nav>
+    <div class="inner">
+      <div class="tab" data-screen="progress" onclick="showScreen('progress')">
+        <span class="ic">📈</span><p>進捗</p>
+      </div>
+      <div class="tab active" data-screen="record" onclick="showScreen('record')">
+        <span class="ic">🏋</span><p>記録</p>
+      </div>
+      <div class="tab" data-screen="body" onclick="showScreen('body')">
+        <span class="ic">⚖</span><p>からだ</p>
+      </div>
+      <div class="tab" data-screen="plan" onclick="showScreen('plan')">
+        <span class="ic">📋</span><p>プラン</p>
+      </div>
+    </div>
+  </nav>
+
+</div>
+
+<div class="modal-backdrop" id="modal-add-exercise">
+  <div class="modal-sheet">
+    <span class="close" onclick="closeModal('modal-add-exercise')">×</span>
+    <h3>種目を追加</h3>
+    <label class="field-label">種目名</label>
+    <input type="text" id="ex-name" placeholder="例: ベンチプレス" list="ex-name-history" style="margin-bottom:12px;" oninput="onExNameInput()">
+    <datalist id="ex-name-history"></datalist>
+    <label class="field-label">種別</label>
+    <div class="type-toggle" id="ex-type-toggle">
+      <button type="button" class="active" data-type="strength" onclick="setExType('strength')">筋トレ (重量×回数)</button>
+      <button type="button" data-type="reps" onclick="setExType('reps')">回数のみ</button>
+      <button type="button" data-type="cardio" onclick="setExType('cardio')">有酸素 (時間・距離)</button>
+    </div>
+    <div id="ex-sets"></div>
+    <button class="secondary" style="margin-bottom:12px;" onclick="addSetRow()">＋ セットを追加</button>
+    <button class="primary" onclick="saveExercise()">保存</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-add-plan">
+  <div class="modal-sheet">
+    <span class="close" onclick="closeModal('modal-add-plan')">×</span>
+    <h3>プランを作成</h3>
+    <label class="field-label">プラン名</label>
+    <input type="text" id="plan-name" placeholder="例: 胸の日" style="margin-bottom:12px;">
+    <div id="plan-exercises"></div>
+    <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
+    <button class="primary" onclick="savePlan()">保存</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-schedule-plan">
+  <div class="modal-sheet">
+    <span class="close" onclick="closeModal('modal-schedule-plan')">×</span>
+    <h3>予定を入れる</h3>
+    <p id="schedule-plan-name" style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;"></p>
+    <label class="field-label">日付</label>
+    <input type="date" id="schedule-date-input" style="margin-bottom:16px;">
+    <button class="primary" onclick="saveSchedule()">この日に予定する</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-settings">
+  <div class="modal-sheet">
+    <span class="close" onclick="closeModal('modal-settings')">×</span>
+    <h3>設定</h3>
+    <p class="field-label">マシン管理</p>
+    <div class="card" style="padding:0;" id="machine-list"></div>
+    <div class="card">
+      <input type="text" id="machine-new-name" placeholder="マシン名を入力" style="margin-bottom:8px;">
+      <div class="type-toggle" id="machine-new-type-toggle">
+        <button type="button" class="active" data-type="strength" onclick="setNewMachineType('strength')">筋トレ</button>
+        <button type="button" data-type="reps" onclick="setNewMachineType('reps')">回数のみ</button>
+        <button type="button" data-type="cardio" onclick="setNewMachineType('cardio')">有酸素</button>
+      </div>
+      <button class="secondary" onclick="addMachine()">＋ マシンを追加</button>
+    </div>
+    <p class="field-label">データ管理</p>
+    <div class="card" style="padding:0;">
+      <div class="list-item" style="padding:12px;cursor:pointer;" onclick="exportData()">
+        <div class="lt"><p>エクスポート</p><p>全データをJSONファイルで保存</p></div>
+        <span>›</span>
+      </div>
+      <div class="list-item" style="padding:12px;cursor:pointer;" onclick="document.getElementById('import-file').click()">
+        <div class="lt"><p>インポート</p><p>JSONファイルから復元</p></div>
+        <span>›</span>
+      </div>
+    </div>
+    <input type="file" id="import-file" accept="application/json" style="display:none;" onchange="importData(event)">
+    <div class="card">
+      <p class="field-label">保存中のデータ</p>
+      <div id="settings-counts"></div>
+    </div>
+    <div class="warn-box">データは端末内にのみ保存されます。定期的なエクスポートをおすすめします。</div>
+  </div>
+</div>
+
+<script>
+const store = {
+  get(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch (e) { return fallback; }
+  },
+  set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+};
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDateLabel(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['日','月','火','水','木','金','土'];
+  return (d.getMonth()+1) + '月' + d.getDate() + '日 (' + days[d.getDay()] + ')';
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function round1(n) { return Math.round(n*10)/10; }
+
+const DEFAULT_MACHINES = [
+  { name: 'トレッドミル', type: 'cardio' },
+  { name: 'ショルダープレス', type: 'strength' },
+  { name: 'チェストプレス', type: 'strength' },
+  { name: 'ラットプルダウン', type: 'strength' },
+  { name: 'レッグプレス', type: 'strength' },
+  { name: 'アダクション', type: 'strength' },
+  { name: 'アブダクション', type: 'strength' },
+  { name: 'アブベンチ', type: 'reps' }
+];
+
+const DEFAULT_PLANS = [
+  { name: 'ベーシックプラン', exercises: [
+    { name: 'トレッドミル', type: 'cardio', setCount: 1, duration: 20, distance: 3 },
+    { name: 'アブベンチ', type: 'reps', setCount: 3, reps: 15 },
+    { name: 'チェストプレス', type: 'strength', setCount: 3, weight: 0, reps: 10 },
+    { name: 'アダクション', type: 'strength', setCount: 3, weight: 0, reps: 15 },
+    { name: 'ラットプルダウン', type: 'strength', setCount: 3, weight: 0, reps: 10 },
+    { name: 'レッグプレス', type: 'strength', setCount: 3, weight: 0, reps: 10 }
+  ]}
+];
+
+let workoutLogs = store.get('workoutLogs', []);
+let bodyLogs = store.get('bodyLogs', []);
+let plans = store.get('plans', null);
+if (!plans) {
+  plans = DEFAULT_PLANS.map(p => ({ id: uid(), name: p.name, exercises: p.exercises }));
+  store.set('plans', plans);
+}
+let activeRun = store.get('activeRun', null);
+let scheduledPlans = store.get('scheduledPlans', []);
+let machines = store.get('machines', null);
+if (!machines) {
+  machines = DEFAULT_MACHINES.map(m => ({ id: uid(), name: m.name, type: m.type }));
+  store.set('machines', machines);
+} else {
+  let migrated = false;
+  const abBench = machines.find(m => m.name === 'アブベンチ');
+  if (abBench && abBench.type !== 'reps') { abBench.type = 'reps'; migrated = true; }
+  if (!machines.find(m => m.name === 'レッグプレス')) {
+    machines.push({ id: uid(), name: 'レッグプレス', type: 'strength' });
+    migrated = true;
+  }
+  if (migrated) store.set('machines', machines);
+}
+
+function saveWorkoutLogs() { store.set('workoutLogs', workoutLogs); }
+function saveBodyLogs() { store.set('bodyLogs', bodyLogs); }
+function savePlans() { store.set('plans', plans); }
+function saveActiveRun() { store.set('activeRun', activeRun); }
+function saveMachines() { store.set('machines', machines); }
+function saveScheduledPlans() { store.set('scheduledPlans', scheduledPlans); }
+
+function machineType(name) {
+  const m = machines.find(m => m.name === name);
+  return m ? m.type : 'strength';
+}
+
+document.getElementById('header-date').textContent = fmtDateLabel(todayStr());
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelector('nav .tab[data-screen="' + name + '"]').classList.add('active');
+  const titles = { record: '記録', progress: '進捗', body: 'からだ', plan: 'プラン' };
+  document.getElementById('header-title').textContent = titles[name];
+  if (name === 'record') renderRecord();
+  if (name === 'progress') { if (progViewMode === 'daily') renderProgressDaily(); else renderProgress(); }
+  if (name === 'body') renderBody();
+  if (name === 'plan') renderPlanScreen();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ---------- 記録 ---------- */
+
+function todaysLogs() {
+  const t = todayStr();
+  return workoutLogs.filter(l => l.date === t);
+}
+
+function summarizeLogs(logs) {
+  let totalVolume = 0, totalSets = 0, totalCardioMin = 0, totalReps = 0;
+  logs.forEach(l => l.sets.forEach(s => {
+    totalSets += 1;
+    if (l.type === 'cardio') totalCardioMin += (s.duration || 0);
+    else if (l.type === 'reps') totalReps += (s.reps || 0);
+    else totalVolume += s.weight * s.reps;
+  }));
+  return { totalVolume, totalSets, totalCardioMin, totalReps };
+}
+
+function badgeClassFor(type) {
+  if (type === 'cardio') return ' badge-cardio';
+  if (type === 'reps') return ' badge-reps';
+  return '';
+}
+
+function exerciseCardsHtml(logs) {
+  if (logs.length === 0) return '<div class="empty">記録がありません</div>';
+  return logs.map(l => {
+    const setsText = l.sets.map(s => {
+      if (l.type === 'cardio') return (s.duration || 0) + '分' + (s.distance ? ' (' + s.distance + 'km)' : '');
+      if (l.type === 'reps') return (s.reps || 0) + '回';
+      return s.weight + 'kg × ' + s.reps;
+    }).join(' / ');
+    return '<div class="exercise-card">' +
+      '<div class="head"><span class="name">' + escapeHtml(l.exercise) + '</span>' +
+      '<span class="badge' + badgeClassFor(l.type) + '">' + l.sets.length + 'セット</span></div>' +
+      '<p class="sets">' + setsText + '</p>' +
+      '<span class="del" onclick="deleteLog(\'' + l.id + '\')">削除</span>' +
+      '</div>';
+  }).join('');
+}
+
+function renderRecord() {
+  const logs = todaysLogs();
+  const { totalVolume, totalSets, totalCardioMin, totalReps } = summarizeLogs(logs);
+  document.getElementById('rec-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
+  const notes = [];
+  if (totalCardioMin) notes.push('有酸素' + totalCardioMin + '分');
+  if (totalReps) notes.push('自重' + totalReps + '回');
+  document.getElementById('rec-sets').textContent = totalSets + (notes.length ? ' (' + notes.join(', ') + ')' : '');
+  document.getElementById('rec-list').innerHTML = logs.length === 0
+    ? '<div class="empty">今日の記録はまだありません</div>'
+    : exerciseCardsHtml(logs);
+}
+
+function deleteLog(id) {
+  workoutLogs = workoutLogs.filter(l => l.id !== id);
+  saveWorkoutLogs();
+  renderRecord();
+  if (progViewMode === 'daily') renderProgressDaily();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- 種目追加モーダル ---------- */
+
+let exCurrentType = 'strength';
+
+function openAddExercise() {
+  document.getElementById('ex-name').value = '';
+  const history = document.getElementById('ex-name-history');
+  const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
+  history.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">').join('');
+  setExType('strength');
+  openModal('modal-add-exercise');
+}
+
+function onExNameInput() {
+  const name = document.getElementById('ex-name').value.trim();
+  const m = machines.find(m => m.name === name);
+  if (m) setExType(m.type);
+}
+
+function setExType(type) {
+  exCurrentType = type;
+  document.querySelectorAll('#ex-type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('ex-sets').innerHTML = '';
+  addSetRow();
+}
+
+function addSetRow() {
+  const wrap = document.getElementById('ex-sets');
+  const idx = wrap.children.length + 1;
+  const prevRow = wrap.lastElementChild;
+  const row = document.createElement('div');
+  row.className = 'set-row';
+  if (exCurrentType === 'cardio') {
+    const prevDuration = prevRow ? prevRow.querySelector('.set-duration').value : '';
+    const prevDistance = prevRow ? prevRow.querySelector('.set-distance').value : '';
+    row.innerHTML = '<span>セット' + idx + '</span>' +
+      '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
+      '<input type="number" step="0.1" class="set-distance" placeholder="距離km(任意)" value="' + prevDistance + '">';
+  } else if (exCurrentType === 'reps') {
+    const prevReps = prevRow ? prevRow.querySelector('.set-reps-only').value : '';
+    row.innerHTML = '<span>セット' + idx + '</span>' +
+      '<input type="number" class="set-reps-only" placeholder="回数" value="' + prevReps + '">';
+  } else {
+    const prevWeight = prevRow ? prevRow.querySelector('.set-weight').value : '';
+    const prevReps = prevRow ? prevRow.querySelector('.set-reps').value : '';
+    row.innerHTML = '<span>セット' + idx + '</span>' +
+      '<div class="stepper">' +
+      '<button type="button" class="step-btn" onclick="adjustWeight(this,-5)">－</button>' +
+      '<input type="number" step="5" class="set-weight" placeholder="kg" value="' + prevWeight + '">' +
+      '<button type="button" class="step-btn" onclick="adjustWeight(this,5)">＋</button>' +
+      '</div>' +
+      '<input type="number" class="set-reps" placeholder="回数" style="flex:1;min-width:0;" value="' + prevReps + '">';
+  }
+  wrap.appendChild(row);
+}
+
+function adjustWeight(btn, delta) {
+  const input = btn.parentElement.querySelector('.set-weight');
+  const next = Math.max(0, (parseFloat(input.value) || 0) + delta);
+  input.value = next;
+}
+
+function saveExercise() {
+  const name = document.getElementById('ex-name').value.trim();
+  if (!name) { alert('種目名を入力してください'); return; }
+  const rows = document.querySelectorAll('#ex-sets .set-row');
+  const sets = [];
+  if (exCurrentType === 'cardio') {
+    rows.forEach(r => {
+      const duration = parseFloat(r.querySelector('.set-duration').value);
+      const distance = parseFloat(r.querySelector('.set-distance').value);
+      if (!isNaN(duration)) sets.push({ duration: duration, distance: isNaN(distance) ? null : distance });
+    });
+  } else if (exCurrentType === 'reps') {
+    rows.forEach(r => {
+      const reps = parseInt(r.querySelector('.set-reps-only').value, 10);
+      if (!isNaN(reps)) sets.push({ reps: reps });
+    });
+  } else {
+    rows.forEach(r => {
+      const w = parseFloat(r.querySelector('.set-weight').value);
+      const reps = parseInt(r.querySelector('.set-reps').value, 10);
+      if (!isNaN(w) && !isNaN(reps)) sets.push({ weight: w, reps: reps });
+    });
+  }
+  if (sets.length === 0) { alert('セットを1つ以上入力してください'); return; }
+  workoutLogs.push({ id: uid(), date: todayStr(), exercise: name, type: exCurrentType, sets: sets });
+  saveWorkoutLogs();
+  closeModal('modal-add-exercise');
+  renderRecord();
+}
+
+/* ---------- 進捗 ---------- */
+
+let progViewMode = 'daily';
+
+function setProgView(mode) {
+  progViewMode = mode;
+  document.getElementById('prog-view-exercise').classList.toggle('active', mode === 'exercise');
+  document.getElementById('prog-view-daily').classList.toggle('active', mode === 'daily');
+  document.getElementById('prog-panel-exercise').style.display = mode === 'exercise' ? 'block' : 'none';
+  document.getElementById('prog-panel-daily').style.display = mode === 'daily' ? 'block' : 'none';
+  if (mode === 'daily') renderProgressDaily(); else renderProgress();
+}
+
+let calendarViewMonth = null;
+
+function monthKey(dateStr) { return dateStr.slice(0, 7); }
+
+function onDailyDateChange() {
+  calendarViewMonth = monthKey(document.getElementById('prog-daily-date').value);
+  renderProgressDaily();
+}
+
+function shiftCalendarMonth(delta) {
+  const [y, m] = calendarViewMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  calendarViewMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  renderCalendar();
+  renderMonthSummary();
+}
+
+function renderProgressDaily() {
+  const dateInput = document.getElementById('prog-daily-date');
+  if (!dateInput.value) dateInput.value = todayStr();
+  if (!calendarViewMonth) calendarViewMonth = monthKey(dateInput.value);
+
+  const logs = workoutLogs.filter(l => l.date === dateInput.value);
+  const { totalVolume, totalSets, totalCardioMin, totalReps } = summarizeLogs(logs);
+  const notes = [];
+  if (totalCardioMin) notes.push('有酸素' + totalCardioMin + '分');
+  if (totalReps) notes.push('自重' + totalReps + '回');
+  document.getElementById('prog-daily-summary').innerHTML =
+    '<div class="stat"><p>総ボリューム</p><p>' + Math.round(totalVolume) + '<span class="unit">kg</span></p></div>' +
+    '<div class="stat"><p>セット数</p><p>' + totalSets + (notes.length ? ' (' + notes.join(', ') + ')' : '') + '</p></div>';
+
+  document.getElementById('prog-daily-list').innerHTML = logs.length === 0
+    ? '<div class="empty">この日の記録はありません</div>'
+    : exerciseCardsHtml(logs);
+
+  renderCalendar();
+  renderMonthSummary();
+}
+
+function renderMonthSummary() {
+  const logsThisMonth = workoutLogs.filter(l => monthKey(l.date) === calendarViewMonth);
+  const daysWithLogs = new Set(logsThisMonth.map(l => l.date)).size;
+  const totalSets = logsThisMonth.reduce((sum, l) => sum + l.sets.length, 0);
+  document.getElementById('prog-month-days').textContent = daysWithLogs + '日';
+  document.getElementById('prog-month-sets').textContent = totalSets;
+}
+
+function renderCalendar() {
+  const [y, m] = calendarViewMonth.split('-').map(Number);
+  const firstWeekday = new Date(y, m - 1, 1).getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const selected = document.getElementById('prog-daily-date').value;
+  const today = todayStr();
+
+  const countsByDay = {};
+  workoutLogs.forEach(l => {
+    if (monthKey(l.date) === calendarViewMonth) countsByDay[l.date] = (countsByDay[l.date] || 0) + l.sets.length;
+  });
+
+  document.getElementById('prog-calendar-label').textContent = y + '年' + m + '月';
+
+  const dow = ['日','月','火','水','木','金','土'];
+  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">' +
+    dow.map(d => '<div style="text-align:center;font-size:10px;color:var(--text-muted);">' + d + '</div>').join('') +
+    '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+
+  for (let i = 0; i < firstWeekday; i++) html += '<div></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const count = countsByDay[dateStr] || 0;
+    const level = count === 0 ? 0 : count <= 2 ? 1 : 2;
+    const bg = level === 0 ? 'var(--bg)' : level === 1 ? 'var(--accent-bg)' : 'var(--accent)';
+    const fg = level === 2 ? 'var(--accent-on)' : level === 1 ? 'var(--accent-text)' : 'var(--text-muted)';
+    const border = dateStr === selected ? '2px solid var(--accent)' : (dateStr === today ? '1px solid var(--border-strong)' : 'none');
+    html += '<div onclick="selectCalendarDay(\'' + dateStr + '\')" style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + '</div>';
+  }
+  html += '</div>';
+  document.getElementById('prog-calendar').innerHTML = html;
+}
+
+function selectCalendarDay(dateStr) {
+  document.getElementById('prog-daily-date').value = dateStr;
+  renderProgressDaily();
+}
+
+function allExerciseNames() {
+  return [...new Set(workoutLogs.map(l => l.exercise))].sort();
+}
+
+function renderProgress() {
+  const sel = document.getElementById('prog-exercise');
+  const names = allExerciseNames();
+  const prev = sel.value;
+  sel.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
+  if (names.length === 0) {
+    document.getElementById('prog-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
+    document.getElementById('prog-bar-chart').innerHTML = '';
+    document.getElementById('prog-count').textContent = '0回';
+    document.getElementById('prog-best').textContent = '-';
+    return;
+  }
+  if (names.includes(prev)) sel.value = prev;
+  const exercise = sel.value;
+
+  const logs = workoutLogs.filter(l => l.exercise === exercise).sort((a,b) => a.date.localeCompare(b.date));
+  const type = logs.length > 0 ? logs[logs.length - 1].type : 'strength';
+
+  const thisMonth = todayStr().slice(0,7);
+  const countThisMonth = logs.filter(l => l.date.slice(0,7) === thisMonth).length;
+  document.getElementById('prog-count').textContent = countThisMonth + '回';
+
+  if (type === 'cardio') {
+    document.getElementById('prog-chart-label').textContent = '合計時間の推移';
+    document.getElementById('prog-bar-label').textContent = '週間合計距離';
+    document.getElementById('prog-best-label').textContent = '自己ベスト(距離)';
+    const points = logs.map(l => ({ date: l.date, max: round1(l.sets.reduce((s,x) => s + (x.duration||0), 0)), unit: '分' }));
+    document.getElementById('prog-chart').innerHTML = lineChartSvg(points);
+    const weeks = weeklyStatForExercise(exercise, l => l.sets.reduce((s,x) => s + (x.distance||0), 0));
+    document.getElementById('prog-bar-chart').innerHTML = barChartSvg(weeks);
+    const bestDist = Math.max(0, ...logs.map(l => l.sets.reduce((s,x) => s + (x.distance||0), 0)));
+    document.getElementById('prog-best').textContent = bestDist ? round1(bestDist) + 'km' : '-';
+  } else if (type === 'reps') {
+    document.getElementById('prog-chart-label').textContent = '最大回数の推移';
+    document.getElementById('prog-bar-label').textContent = '週間合計回数';
+    document.getElementById('prog-best-label').textContent = '自己ベスト';
+    const points = logs.map(l => ({ date: l.date, max: Math.max(...l.sets.map(s => s.reps)), unit: '回' }));
+    document.getElementById('prog-chart').innerHTML = lineChartSvg(points);
+    const weeks = weeklyStatForExercise(exercise, l => l.sets.reduce((s,x) => s + x.reps, 0));
+    document.getElementById('prog-bar-chart').innerHTML = barChartSvg(weeks);
+    const best = points.length ? Math.max(...points.map(p => p.max)) : 0;
+    document.getElementById('prog-best').textContent = best ? best + '回' : '-';
+  } else {
+    document.getElementById('prog-chart-label').textContent = '最大重量の推移';
+    document.getElementById('prog-bar-label').textContent = '週間ボリューム';
+    document.getElementById('prog-best-label').textContent = '自己ベスト';
+    const points = logs.map(l => ({ date: l.date, max: Math.max(...l.sets.map(s => s.weight)), unit: 'kg' }));
+    document.getElementById('prog-chart').innerHTML = lineChartSvg(points);
+    const weeks = weeklyStatForExercise(exercise, l => l.sets.reduce((s,x) => s + x.weight * x.reps, 0));
+    document.getElementById('prog-bar-chart').innerHTML = barChartSvg(weeks);
+    const best = points.length ? Math.max(...points.map(p => p.max)) : 0;
+    document.getElementById('prog-best').textContent = best ? best + 'kg' : '-';
+  }
+}
+
+function weeklyStatForExercise(exercise, valueFn) {
+  const logs = workoutLogs.filter(l => l.exercise === exercise);
+  const byWeek = {};
+  logs.forEach(l => {
+    const d = new Date(l.date + 'T00:00:00');
+    const onejan = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+    const key = d.getFullYear() + '-W' + week;
+    byWeek[key] = (byWeek[key] || 0) + valueFn(l);
+  });
+  const keys = Object.keys(byWeek).sort();
+  return keys.slice(-6).map(k => ({ label: k.split('-W')[1], value: byWeek[k] }));
+}
+
+function lineChartSvg(points) {
+  if (points.length === 0) return '<div class="empty">データがありません</div>';
+  const w = 320, h = 110, padL = 30, padR = 10, padT = 14, padB = 20;
+  const values = points.map(p => p.max);
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const step = points.length > 1 ? (w - padL - padR) / (points.length - 1) : 0;
+  const coords = points.map((p, i) => {
+    const x = padL + step * i;
+    const y = padT + (h - padT - padB) * (1 - (p.max - min) / range);
+    return { x, y, label: p.max, unit: p.unit || '' };
+  });
+  const poly = coords.map(c => c.x + ',' + c.y).join(' ');
+  const last = coords[coords.length - 1];
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
+    '<line x1="' + padL + '" y1="' + (h-padB) + '" x2="' + (w-padR) + '" y2="' + (h-padB) + '" stroke="var(--border-strong)" stroke-width="0.5"/>' +
+    '<polyline points="' + poly + '" fill="none" stroke="var(--green)" stroke-width="2"/>' +
+    '<circle cx="' + last.x + '" cy="' + last.y + '" r="3.5" fill="var(--green)"/>' +
+    '<text x="' + last.x + '" y="' + (last.y - 8) + '" text-anchor="end" font-size="11" fill="var(--text)">' + last.label + last.unit + '</text>' +
+    '</svg>';
+}
+
+function barChartSvg(weeks) {
+  if (weeks.length === 0) return '<div class="empty">データがありません</div>';
+  const w = 320, h = 90, padB = 16, padT = 10;
+  const barW = (w - 20) / weeks.length - 8;
+  const max = Math.max(...weeks.map(x => x.value)) || 1;
+  let bars = '';
+  weeks.forEach((wk, i) => {
+    const x = 10 + i * ((w-20)/weeks.length);
+    const barH = (h - padT - padB) * (wk.value / max);
+    const y = h - padB - barH;
+    const isLast = i === weeks.length - 1;
+    bars += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + Math.max(barH,2) + '" rx="2" fill="' + (isLast ? 'var(--green)' : 'var(--green-bg)') + '"/>';
+    bars += '<text x="' + (x + barW/2) + '" y="' + (h-4) + '" text-anchor="middle" font-size="8" fill="var(--text-muted)">W' + wk.label + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' + bars + '</svg>';
+}
+
+/* ---------- からだ ---------- */
+
+let bodyRangeDays = 30;
+function setBodyRange(days, btn) {
+  bodyRangeDays = days;
+  document.querySelectorAll('#screen-body .seg button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBody();
+}
+
+function saveBodyLog() {
+  const weight = parseFloat(document.getElementById('body-weight-input').value);
+  const fat = parseFloat(document.getElementById('body-fat-input').value);
+  if (isNaN(weight)) { alert('体重を入力してください'); return; }
+  const t = todayStr();
+  const existing = bodyLogs.find(b => b.date === t);
+  if (existing) {
+    existing.weight = weight;
+    existing.fat = isNaN(fat) ? existing.fat : fat;
+  } else {
+    bodyLogs.push({ date: t, weight: weight, fat: isNaN(fat) ? null : fat });
+  }
+  saveBodyLogs();
+  document.getElementById('body-weight-input').value = '';
+  document.getElementById('body-fat-input').value = '';
+  renderBody();
+}
+
+function renderBody() {
+  const sorted = [...bodyLogs].sort((a,b) => a.date.localeCompare(b.date));
+  if (sorted.length === 0) {
+    document.getElementById('body-weight-latest').innerHTML = '-<span class="unit">kg</span>';
+    document.getElementById('body-fat-latest').innerHTML = '-<span class="unit">%</span>';
+    document.getElementById('body-weight-diff').textContent = '';
+    document.getElementById('body-fat-diff').textContent = '';
+    document.getElementById('body-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
+    document.getElementById('body-month-diff').textContent = '-';
+    document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
+    return;
+  }
+  const latest = sorted[sorted.length - 1];
+  const prev = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+  document.getElementById('body-weight-latest').innerHTML = latest.weight + '<span class="unit">kg</span>';
+  document.getElementById('body-fat-latest').innerHTML = (latest.fat != null ? latest.fat : '-') + '<span class="unit">%</span>';
+
+  function diffText(cur, prevVal, el) {
+    if (prevVal == null || cur == null) { el.textContent = ''; return; }
+    const d = round1(cur - prevVal);
+    el.textContent = (d <= 0 ? '前日 ' + d : '前日 +' + d);
+    el.style.color = d <= 0 ? 'var(--green-text)' : 'var(--coral)';
+  }
+  diffText(latest.weight, prev ? prev.weight : null, document.getElementById('body-weight-diff'));
+  diffText(latest.fat, prev ? prev.fat : null, document.getElementById('body-fat-diff'));
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - bodyRangeDays);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const inRange = sorted.filter(b => b.date >= cutoffStr);
+  document.getElementById('body-chart').innerHTML = bodyDualChartSvg(inRange);
+
+  const monthStart = todayStr().slice(0,7) + '-01';
+  const monthLogs = sorted.filter(b => b.date >= monthStart);
+  if (monthLogs.length > 0) {
+    const d = round1(latest.weight - monthLogs[0].weight);
+    document.getElementById('body-month-diff').textContent = (d <= 0 ? '' : '+') + d + 'kg';
+  } else {
+    document.getElementById('body-month-diff').textContent = '-';
+  }
+  if (latest.fat != null) {
+    const lean = round1(latest.weight * (1 - latest.fat/100));
+    document.getElementById('body-lean').innerHTML = lean + '<span class="unit">kg</span>';
+  } else {
+    document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
+  }
+}
+
+function bodyDualChartSvg(logs) {
+  if (logs.length === 0) return '<div class="empty">データがありません</div>';
+  const w = 320, h = 120, padL = 10, padR = 10, padT = 14, padB = 20;
+  const weights = logs.map(l => l.weight);
+  const fats = logs.filter(l => l.fat != null).map(l => l.fat);
+  const wMin = Math.min(...weights), wMax = Math.max(...weights);
+  const wRange = (wMax - wMin) || 1;
+  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+
+  const weightCoords = logs.map((l, i) => ({
+    x: padL + step * i,
+    y: padT + (h - padT - padB) * (1 - (l.weight - wMin) / wRange)
+  }));
+  const weightPoly = weightCoords.map(c => c.x + ',' + c.y).join(' ');
+  const lastW = weightCoords[weightCoords.length - 1];
+
+  let fatPart = '';
+  if (fats.length > 0) {
+    const fMin = Math.min(...fats), fMax = Math.max(...fats);
+    const fRange = (fMax - fMin) || 1;
+    const fatCoords = logs.map((l, i) => {
+      if (l.fat == null) return null;
+      return { x: padL + step * i, y: padT + (h - padT - padB) * (1 - (l.fat - fMin) / fRange) };
+    }).filter(Boolean);
+    if (fatCoords.length > 0) {
+      const fatPoly = fatCoords.map(c => c.x + ',' + c.y).join(' ');
+      const lastF = fatCoords[fatCoords.length - 1];
+      fatPart = '<polyline points="' + fatPoly + '" fill="none" stroke="var(--coral)" stroke-width="2" stroke-dasharray="4 3"/>' +
+        '<circle cx="' + lastF.x + '" cy="' + lastF.y + '" r="3" fill="var(--coral)"/>' +
+        '<text x="' + lastF.x + '" y="' + (h - 4) + '" text-anchor="end" font-size="10" fill="var(--coral)">' + logs[logs.length-1].fat + '%</text>';
+    }
+  }
+
+  return '<div style="display:flex;gap:10px;font-size:10px;margin-bottom:6px;">' +
+    '<span style="color:var(--purple);">● 体重</span><span style="color:var(--coral);">● 体脂肪率</span></div>' +
+    '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
+    '<line x1="' + padL + '" y1="' + (h-padB) + '" x2="' + (w-padR) + '" y2="' + (h-padB) + '" stroke="var(--border-strong)" stroke-width="0.5"/>' +
+    '<polyline points="' + weightPoly + '" fill="none" stroke="var(--purple)" stroke-width="2"/>' +
+    '<circle cx="' + lastW.x + '" cy="' + lastW.y + '" r="3.5" fill="var(--purple)"/>' +
+    '<text x="' + lastW.x + '" y="' + (lastW.y - 8) + '" text-anchor="end" font-size="10" fill="var(--purple)">' + logs[logs.length-1].weight + 'kg</text>' +
+    fatPart +
+    '</svg>';
+}
+
+/* ---------- プラン ---------- */
+
+function openAddPlan() {
+  document.getElementById('plan-name').value = '';
+  document.getElementById('plan-exercises').innerHTML = '';
+  const history = document.getElementById('ex-name-history');
+  const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
+  history.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">').join('');
+  addPlanExerciseRow();
+  openModal('modal-add-plan');
+}
+
+function addPlanExerciseRow() {
+  const wrap = document.getElementById('plan-exercises');
+  const row = document.createElement('div');
+  row.className = 'card plan-ex-row';
+  row.style.marginBottom = '10px';
+  row.dataset.type = 'strength';
+  row.innerHTML =
+    '<input type="text" class="plan-ex-name" placeholder="種目名" list="ex-name-history" style="margin-bottom:8px;" oninput="onPlanExNameInput(this)">' +
+    '<div class="plan-ex-fields"></div>';
+  wrap.appendChild(row);
+  renderPlanExFields(row, 'strength');
+}
+
+function onPlanExNameInput(input) {
+  const row = input.closest('.plan-ex-row');
+  const m = machines.find(m => m.name === input.value.trim());
+  renderPlanExFields(row, m ? m.type : 'strength');
+}
+
+function renderPlanExFields(row, type) {
+  row.dataset.type = type;
+  const fields = row.querySelector('.plan-ex-fields');
+  if (type === 'cardio') {
+    fields.innerHTML = '<div class="row">' +
+      '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="1">' +
+      '<input type="number" step="1" class="plan-ex-duration" placeholder="目標時間(分)">' +
+      '<input type="number" step="0.1" class="plan-ex-distance" placeholder="目標距離km">' +
+      '</div>';
+  } else if (type === 'reps') {
+    fields.innerHTML = '<div class="row">' +
+      '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="3">' +
+      '<input type="number" class="plan-ex-reps" placeholder="目標回数">' +
+      '</div>';
+  } else {
+    fields.innerHTML = '<div class="row">' +
+      '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="3">' +
+      '<input type="number" step="0.5" class="plan-ex-weight" placeholder="目標重量kg">' +
+      '<input type="number" class="plan-ex-reps" placeholder="目標回数">' +
+      '</div>';
+  }
+}
+
+function savePlan() {
+  const name = document.getElementById('plan-name').value.trim();
+  if (!name) { alert('プラン名を入力してください'); return; }
+  const rows = document.querySelectorAll('#plan-exercises .plan-ex-row');
+  const exercises = [];
+  rows.forEach(r => {
+    const exName = r.querySelector('.plan-ex-name').value.trim();
+    if (!exName) return;
+    const type = r.dataset.type;
+    const setCount = parseInt(r.querySelector('.plan-ex-setcount').value, 10) || 1;
+    if (type === 'cardio') {
+      const duration = parseFloat(r.querySelector('.plan-ex-duration').value) || 0;
+      const distance = parseFloat(r.querySelector('.plan-ex-distance').value) || 0;
+      exercises.push({ name: exName, type, setCount, duration, distance });
+    } else if (type === 'reps') {
+      const reps = parseInt(r.querySelector('.plan-ex-reps').value, 10) || 0;
+      exercises.push({ name: exName, type, setCount, reps });
+    } else {
+      const weight = parseFloat(r.querySelector('.plan-ex-weight').value) || 0;
+      const reps = parseInt(r.querySelector('.plan-ex-reps').value, 10) || 0;
+      exercises.push({ name: exName, type, setCount, weight, reps });
+    }
+  });
+  if (exercises.length === 0) { alert('種目を1つ以上入力してください'); return; }
+  plans.push({ id: uid(), name, exercises });
+  savePlans();
+  closeModal('modal-add-plan');
+  renderPlanScreen();
+}
+
+function deletePlan(id) {
+  plans = plans.filter(p => p.id !== id);
+  savePlans();
+  renderPlanScreen();
+}
+
+function renderPlanScreen() {
+  if (activeRun) {
+    renderPlanRun();
+    return;
+  }
+  document.getElementById('plan-list-view').style.display = 'block';
+  document.getElementById('plan-run-view').style.display = 'none';
+  const list = document.getElementById('plan-list');
+  if (plans.length === 0) {
+    list.innerHTML = '<div class="empty">プランがまだありません</div>';
+  } else {
+    list.innerHTML = plans.map(p =>
+      '<div class="card">' +
+      '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-weight:600;font-size:14px;">' + escapeHtml(p.name) + '</span>' +
+      '<span class="del" style="color:var(--coral);font-size:12px;cursor:pointer;" onclick="deletePlan(\'' + p.id + '\')">削除</span>' +
+      '</div>' +
+      '<p style="font-size:12px;color:var(--text-secondary);margin:6px 0 10px;">' + p.exercises.map(e => escapeHtml(e.name)).join(' / ') + '</p>' +
+      '<div class="row">' +
+      '<button class="secondary" onclick="openSchedulePlan(\'' + p.id + '\')">📅 予定に追加</button>' +
+      '<button class="primary" onclick="startPlan(\'' + p.id + '\')">開始</button>' +
+      '</div>' +
+      '</div>'
+    ).join('');
+  }
+  renderScheduleList();
+}
+
+function renderScheduleList() {
+  const el = document.getElementById('schedule-list');
+  const today = todayStr();
+  const upcoming = scheduledPlans
+    .filter(s => s.date >= today && plans.find(p => p.id === s.planId))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (upcoming.length === 0) {
+    el.innerHTML = '<div class="empty">予定はまだありません</div>';
+    return;
+  }
+  el.innerHTML = upcoming.map(s => {
+    const plan = plans.find(p => p.id === s.planId);
+    const isToday = s.date === today;
+    return '<div class="card" style="' + (isToday ? 'border:2px solid var(--accent);' : '') + '">' +
+      '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-size:12px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + '</span>' +
+      '<span class="del" style="color:var(--coral);font-size:12px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\')">削除</span>' +
+      '</div>' +
+      '<p style="font-weight:600;font-size:14px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
+      (isToday ? '<button class="primary" onclick="startPlan(\'' + plan.id + '\')">開始</button>' : '') +
+      '</div>';
+  }).join('');
+}
+
+let scheduleTargetPlanId = null;
+
+function openSchedulePlan(planId) {
+  scheduleTargetPlanId = planId;
+  const plan = plans.find(p => p.id === planId);
+  document.getElementById('schedule-plan-name').textContent = plan ? plan.name : '';
+  document.getElementById('schedule-date-input').value = todayStr();
+  openModal('modal-schedule-plan');
+}
+
+function saveSchedule() {
+  const date = document.getElementById('schedule-date-input').value;
+  if (!date) { alert('日付を選択してください'); return; }
+  scheduledPlans = scheduledPlans.filter(s => s.date !== date);
+  scheduledPlans.push({ date, planId: scheduleTargetPlanId });
+  saveScheduledPlans();
+  closeModal('modal-schedule-plan');
+  renderScheduleList();
+}
+
+function removeSchedule(date) {
+  scheduledPlans = scheduledPlans.filter(s => s.date !== date);
+  saveScheduledPlans();
+  renderScheduleList();
+}
+
+function startPlan(id) {
+  const plan = plans.find(p => p.id === id);
+  if (!plan) return;
+  const queue = [];
+  plan.exercises.forEach(ex => {
+    const type = ex.type || 'strength';
+    for (let i = 0; i < ex.setCount; i++) {
+      if (type === 'cardio') {
+        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, duration: ex.duration, distance: ex.distance });
+      } else if (type === 'reps') {
+        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, reps: ex.reps });
+      } else {
+        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, weight: ex.weight, reps: ex.reps });
+      }
+    }
+  });
+  activeRun = { planName: plan.name, queue, currentIndex: 0, timerRunning: false, timerRemaining: 90, timerTotal: 90 };
+  saveActiveRun();
+  renderPlanScreen();
+}
+
+let timerInterval = null;
+
+function renderPlanRun() {
+  document.getElementById('plan-list-view').style.display = 'none';
+  const view = document.getElementById('plan-run-view');
+  view.style.display = 'block';
+
+  const cur = activeRun.queue[activeRun.currentIndex];
+  if (!cur) {
+    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:15px;font-weight:600;">プラン完了 🎉</p>' +
+      '<button class="primary" onclick="finishPlan()">終了する</button></div>';
+    return;
+  }
+
+  const doneList = activeRun.queue.slice(0, activeRun.currentIndex);
+  const upcoming = activeRun.queue.slice(activeRun.currentIndex + 1, activeRun.currentIndex + 3);
+
+  const circumference = 2 * Math.PI * 52;
+  const pct = activeRun.timerTotal > 0 ? activeRun.timerRemaining / activeRun.timerTotal : 0;
+  const offset = circumference * (1 - pct);
+  const mm = Math.floor(Math.max(activeRun.timerRemaining,0) / 60);
+  const ss = String(Math.max(activeRun.timerRemaining,0) % 60).padStart(2, '0');
+
+  let targetText, actualFieldsHtml;
+  if (cur.type === 'cardio') {
+    targetText = cur.duration ? ' ・ 目標 ' + cur.duration + '分' + (cur.distance ? ' / ' + cur.distance + 'km' : '') : '';
+    actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
+      '<input type="number" step="1" id="run-actual-1" placeholder="時間(分)" value="' + (cur.duration || '') + '">' +
+      '<input type="number" step="0.1" id="run-actual-2" placeholder="距離km(任意)" value="' + (cur.distance || '') + '">' +
+      '</div>';
+  } else if (cur.type === 'reps') {
+    targetText = cur.reps ? ' ・ 目標 ' + cur.reps + '回' : '';
+    actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
+      '<input type="number" id="run-actual-1" placeholder="回数" value="' + (cur.reps || '') + '">' +
+      '</div>';
+  } else {
+    targetText = cur.weight ? ' ・ 目標 ' + cur.weight + 'kg × ' + cur.reps : '';
+    actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
+      '<input type="number" step="0.5" id="run-actual-1" placeholder="重量kg" value="' + (cur.weight || '') + '">' +
+      '<input type="number" id="run-actual-2" placeholder="回数" value="' + (cur.reps || '') + '">' +
+      '</div>';
+  }
+
+  view.innerHTML =
+    '<div class="card">' +
+    '<p style="margin:0;font-size:11px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) + '</p>' +
+    '<p style="margin:2px 0 0;font-size:16px;font-weight:600;">' + escapeHtml(cur.name) + '</p>' +
+    '<p style="margin:2px 0 10px;font-size:12px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
+    '<label class="field-label">実際の記録</label>' +
+    actualFieldsHtml +
+    '<div class="timer-circle">' +
+    '<svg viewBox="0 0 120 120" style="width:130px;">' +
+    '<circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="6"/>' +
+    '<circle id="timer-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" ' +
+      'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 60 60)"/>' +
+    '<text id="timer-text" x="60" y="58" text-anchor="middle" font-size="24" font-weight="600" fill="var(--text)">' + mm + ':' + ss + '</text>' +
+    '<text x="60" y="76" text-anchor="middle" font-size="9" fill="var(--text-muted)">インターバル</text>' +
+    '</svg>' +
+    '</div>' +
+    '<div class="row">' +
+    '<button class="secondary" id="timer-toggle-btn" onclick="toggleTimer()">' + (activeRun.timerRunning ? '一時停止' : '再開') + '</button>' +
+    '<button class="primary" onclick="nextSet()">次のセット</button>' +
+    '</div>' +
+    '</div>' +
+    '<div class="card">' +
+    doneList.map(d => '<div class="list-item"><span style="color:var(--green);">✓</span><div class="lt"><p style="text-decoration:line-through;color:var(--text-muted);">' + escapeHtml(d.name) + ' セット' + d.setIndex + '</p></div></div>').join('') +
+    '<div class="list-item"><span style="color:var(--accent);">●</span><div class="lt"><p>' + escapeHtml(cur.name) + ' セット' + cur.setIndex + '</p></div></div>' +
+    upcoming.map(u => '<div class="list-item"><span style="color:var(--text-muted);">○</span><div class="lt"><p style="color:var(--text-secondary);">' + escapeHtml(u.name) + ' セット' + u.setIndex + '</p></div></div>').join('') +
+    '</div>' +
+    '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
+}
+
+function updateTimerDisplay() {
+  if (!activeRun) return;
+  const circumference = 2 * Math.PI * 52;
+  const pct = activeRun.timerTotal > 0 ? activeRun.timerRemaining / activeRun.timerTotal : 0;
+  const offset = circumference * (1 - pct);
+  const mm = Math.floor(Math.max(activeRun.timerRemaining,0) / 60);
+  const ss = String(Math.max(activeRun.timerRemaining,0) % 60).padStart(2, '0');
+  const arc = document.getElementById('timer-arc');
+  const text = document.getElementById('timer-text');
+  if (arc) arc.setAttribute('stroke-dashoffset', offset);
+  if (text) text.textContent = mm + ':' + ss;
+}
+
+function toggleTimer() {
+  activeRun.timerRunning = !activeRun.timerRunning;
+  saveActiveRun();
+  if (activeRun.timerRunning) startTimerLoop(); else stopTimerLoop();
+  const btn = document.getElementById('timer-toggle-btn');
+  if (btn) btn.textContent = activeRun.timerRunning ? '一時停止' : '再開';
+}
+
+function startTimerLoop() {
+  stopTimerLoop();
+  timerInterval = setInterval(() => {
+    if (!activeRun || !activeRun.timerRunning) return;
+    activeRun.timerRemaining -= 1;
+    if (activeRun.timerRemaining <= 0) {
+      activeRun.timerRemaining = 0;
+      activeRun.timerRunning = false;
+      stopTimerLoop();
+      saveActiveRun();
+      renderPlanRun();
+      return;
+    }
+    saveActiveRun();
+    updateTimerDisplay();
+  }, 1000);
+}
+function stopTimerLoop() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function recordCurrentSet() {
+  const cur = activeRun.queue[activeRun.currentIndex];
+  if (!cur) return;
+  const a1 = parseFloat(document.getElementById('run-actual-1')?.value);
+  const a2 = parseFloat(document.getElementById('run-actual-2')?.value);
+  let set;
+  if (cur.type === 'cardio') {
+    const duration = !isNaN(a1) ? a1 : cur.duration;
+    if (!duration) return;
+    set = { duration: duration, distance: !isNaN(a2) ? a2 : (cur.distance || null) };
+  } else if (cur.type === 'reps') {
+    const reps = !isNaN(a1) ? a1 : cur.reps;
+    if (!reps) return;
+    set = { reps: reps };
+  } else {
+    const weight = !isNaN(a1) ? a1 : cur.weight;
+    const reps = !isNaN(a2) ? a2 : cur.reps;
+    if (!weight && !reps) return;
+    set = { weight: weight || 0, reps: reps || 0 };
+  }
+  const t = todayStr();
+  let entry = workoutLogs.find(l => l.date === t && l.exercise === cur.name && l.type === cur.type);
+  if (!entry) {
+    entry = { id: uid(), date: t, exercise: cur.name, type: cur.type, sets: [] };
+    workoutLogs.push(entry);
+  }
+  entry.sets.push(set);
+  saveWorkoutLogs();
+}
+
+function nextSet() {
+  recordCurrentSet();
+  activeRun.currentIndex += 1;
+  activeRun.timerRemaining = activeRun.timerTotal;
+  activeRun.timerRunning = false;
+  stopTimerLoop();
+  saveActiveRun();
+  renderPlanRun();
+}
+
+function finishPlan() {
+  activeRun = null;
+  stopTimerLoop();
+  saveActiveRun();
+  renderPlanScreen();
+}
+
+function quitPlan() {
+  if (confirm('プランを中断しますか？')) finishPlan();
+}
+
+/* ---------- マシン管理 ---------- */
+
+let newMachineType = 'strength';
+
+function setNewMachineType(type) {
+  newMachineType = type;
+  document.querySelectorAll('#machine-new-type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+}
+
+function renderMachineList() {
+  const list = document.getElementById('machine-list');
+  if (machines.length === 0) {
+    list.innerHTML = '<div class="empty">マシンが登録されていません</div>';
+    return;
+  }
+  list.innerHTML = machines.map(m =>
+    '<div class="machine-row">' +
+    '<span class="mname">' + escapeHtml(m.name) + '</span>' +
+    '<span class="badge' + badgeClassFor(m.type) + '">' + typeLabel(m.type) + '</span>' +
+    '<span class="del" style="color:var(--coral);font-size:12px;cursor:pointer;" onclick="deleteMachine(\'' + m.id + '\')">削除</span>' +
+    '</div>'
+  ).join('');
+}
+
+function typeLabel(type) {
+  if (type === 'cardio') return '有酸素';
+  if (type === 'reps') return '回数のみ';
+  return '筋トレ';
+}
+
+function addMachine() {
+  const input = document.getElementById('machine-new-name');
+  const name = input.value.trim();
+  if (!name) { alert('マシン名を入力してください'); return; }
+  machines.push({ id: uid(), name, type: newMachineType });
+  saveMachines();
+  input.value = '';
+  setNewMachineType('strength');
+  renderMachineList();
+}
+
+function deleteMachine(id) {
+  machines = machines.filter(m => m.id !== id);
+  saveMachines();
+  renderMachineList();
+}
+
+/* ---------- 設定（エクスポート/インポート） ---------- */
+
+function openSettings() {
+  renderMachineList();
+  document.getElementById('settings-counts').innerHTML =
+    '<div class="row" style="flex-direction:column;gap:4px;">' +
+    rowLine('ワークアウト記録', workoutLogs.length + '件') +
+    rowLine('体重・体脂肪率', bodyLogs.length + '件') +
+    rowLine('トレーニングプラン', plans.length + '件') +
+    rowLine('登録マシン', machines.length + '件') +
+    '</div>';
+  openModal('modal-settings');
+}
+function rowLine(label, value) {
+  return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">' +
+    '<span style="color:var(--text-secondary);">' + label + '</span><span style="font-weight:600;">' + value + '</span></div>';
+}
+
+function exportData() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    workoutLogs, bodyLogs, plans, machines, scheduledPlans
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'workout-backup-' + todayStr() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.workoutLogs || !data.bodyLogs || !data.plans) throw new Error('invalid');
+      const mode = confirm('OK: 既存データに追加(マージ)\nキャンセル: 既存データを置き換え(上書き)');
+      if (mode) {
+        const existingIds = new Set(workoutLogs.map(l => l.id));
+        data.workoutLogs.forEach(l => { if (!existingIds.has(l.id)) workoutLogs.push(l); });
+        const existingBodyDates = new Set(bodyLogs.map(b => b.date));
+        data.bodyLogs.forEach(b => { if (!existingBodyDates.has(b.date)) bodyLogs.push(b); });
+        const existingPlanIds = new Set(plans.map(p => p.id));
+        data.plans.forEach(p => { if (!existingPlanIds.has(p.id)) plans.push(p); });
+        const existingMachineNames = new Set(machines.map(m => m.name));
+        (data.machines || []).forEach(m => { if (!existingMachineNames.has(m.name)) machines.push(m); });
+        const existingScheduleDates = new Set(scheduledPlans.map(s => s.date));
+        (data.scheduledPlans || []).forEach(s => { if (!existingScheduleDates.has(s.date)) scheduledPlans.push(s); });
+      } else {
+        workoutLogs = data.workoutLogs;
+        bodyLogs = data.bodyLogs;
+        plans = data.plans;
+        machines = data.machines || machines;
+        scheduledPlans = data.scheduledPlans || [];
+      }
+      saveWorkoutLogs(); saveBodyLogs(); savePlans(); saveMachines(); saveScheduledPlans();
+      closeModal('modal-settings');
+      renderAll();
+      alert('インポートが完了しました');
+    } catch (e) {
+      alert('ファイルの形式が正しくありません');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- init ---------- */
+
+function renderAll() {
+  renderRecord();
+  renderProgress();
+  renderBody();
+  renderPlanScreen();
+}
+
+if (activeRun) startTimerLoop();
+renderAll();
+</script>
+</body>
+</html>
