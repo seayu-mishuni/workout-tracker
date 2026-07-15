@@ -343,7 +343,7 @@
     <span class="close" onclick="closeModal('modal-add-exercise')">×</span>
     <h3>種目を追加</h3>
     <label class="field-label">種目名</label>
-    <input type="text" id="ex-name" placeholder="例: ベンチプレス" list="ex-name-history" style="margin-bottom:12px;" oninput="onExNameInput()">
+    <input type="text" id="ex-name" placeholder="例: ベンチプレス" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;" oninput="onExNameInput()">
     <datalist id="ex-name-history"></datalist>
     <label class="field-label">種別</label>
     <div class="type-toggle" id="ex-type-toggle">
@@ -362,7 +362,7 @@
     <span class="close" onclick="closeModal('modal-add-plan')">×</span>
     <h3 id="add-plan-title">テンプレートを作成</h3>
     <label class="field-label">テンプレート名</label>
-    <input type="text" id="plan-name" placeholder="例: 胸の日" style="margin-bottom:12px;">
+    <input type="text" id="plan-name" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
     <div id="plan-exercises"></div>
     <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
     <button class="primary" onclick="savePlan()">保存</button>
@@ -397,7 +397,7 @@
     <p class="field-label">マシン管理</p>
     <div class="card" style="padding:0;" id="machine-list"></div>
     <div class="card">
-      <input type="text" id="machine-new-name" placeholder="マシン名を入力" style="margin-bottom:8px;">
+      <input type="text" id="machine-new-name" placeholder="マシン名を入力" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;">
       <div class="type-toggle" id="machine-new-type-toggle">
         <button type="button" class="active" data-type="strength" onclick="setNewMachineType('strength')">筋トレ</button>
         <button type="button" data-type="reps" onclick="setNewMachineType('reps')">回数のみ</button>
@@ -1099,7 +1099,7 @@ function addPlanExerciseRow(prefill) {
   const type = prefill ? prefill.type : 'strength';
   row.dataset.type = type;
   row.innerHTML =
-    '<input type="text" class="plan-ex-name" placeholder="種目名" list="ex-name-history" style="margin-bottom:8px;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
+    '<input type="text" class="plan-ex-name" placeholder="種目名" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
     '<div class="plan-ex-fields"></div>';
   wrap.appendChild(row);
   renderPlanExFields(row, type, prefill);
