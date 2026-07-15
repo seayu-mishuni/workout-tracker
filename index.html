@@ -415,6 +415,10 @@
         <div class="lt"><p>インポート</p><p>JSONファイルから復元</p></div>
         <span>›</span>
       </div>
+      <div class="list-item" style="padding:12px;cursor:pointer;" onclick="resetAllData()">
+        <div class="lt"><p style="color:var(--coral);">全データを初期化</p><p>記録・プラン・マシンをすべて消去</p></div>
+        <span>›</span>
+      </div>
     </div>
     <input type="file" id="import-file" accept="application/json" style="display:none;" onchange="importData(event)">
     <div class="card">
@@ -1671,6 +1675,13 @@ function importData(event) {
     event.target.value = '';
   };
   reader.readAsText(file);
+}
+
+function resetAllData() {
+  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・プラン・マシン・予定がすべて消え、元に戻せません。')) return;
+  if (!confirm('本当によろしいですか？この操作は取り消せません。')) return;
+  ['workoutLogs', 'bodyLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun'].forEach(key => localStorage.removeItem(key));
+  location.reload();
 }
 
 /* ---------- init ---------- */
