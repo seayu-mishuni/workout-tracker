@@ -645,7 +645,8 @@ function addSetRow() {
 }
 
 function adjustWeight(btn, delta) {
-  const input = btn.parentElement.querySelector('.set-weight');
+  const input = btn.parentElement.querySelector('input[type="number"]');
+  if (!input) return;
   const next = Math.max(0, (parseFloat(input.value) || 0) + delta);
   input.value = next;
 }
@@ -1122,9 +1123,13 @@ function renderPlanExFields(row, type, prefill) {
       '</div>';
   } else {
     fields.innerHTML = '<div class="row">' +
-      '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="' + setCount + '">' +
-      '<input type="number" step="0.5" class="plan-ex-weight" placeholder="目標重量kg" value="' + (prefill && prefill.weight ? prefill.weight : '') + '">' +
-      '<input type="number" class="plan-ex-reps" placeholder="目標回数" value="' + (prefill && prefill.reps ? prefill.reps : '') + '">' +
+      '<input type="number" class="plan-ex-setcount" placeholder="セット数" style="flex:1;min-width:0;" value="' + setCount + '">' +
+      '<div class="stepper" style="flex:1.6;min-width:0;">' +
+      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:15px;" onclick="adjustWeight(this,-5)">－</button>' +
+      '<input type="number" step="5" class="plan-ex-weight" placeholder="kg" style="min-width:0;" value="' + (prefill && prefill.weight ? prefill.weight : '') + '">' +
+      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:15px;" onclick="adjustWeight(this,5)">＋</button>' +
+      '</div>' +
+      '<input type="number" class="plan-ex-reps" placeholder="目標回数" style="flex:1;min-width:0;" value="' + (prefill && prefill.reps ? prefill.reps : '') + '">' +
       '</div>';
   }
 }
@@ -1397,8 +1402,12 @@ function renderPlanRun() {
   } else {
     targetText = cur.weight ? ' ・ 目標 ' + cur.weight + 'kg × ' + cur.reps : '';
     actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
-      '<input type="number" step="0.5" id="run-actual-1" placeholder="重量kg" value="' + (cur.weight || '') + '">' +
-      '<input type="number" id="run-actual-2" placeholder="回数" value="' + (cur.reps || '') + '">' +
+      '<div class="stepper" style="flex:1.4;min-width:0;">' +
+      '<button type="button" class="step-btn" style="flex-shrink:0;" onclick="adjustWeight(this,-5)">－</button>' +
+      '<input type="number" step="5" id="run-actual-1" placeholder="kg" style="min-width:0;" value="' + (cur.weight || '') + '">' +
+      '<button type="button" class="step-btn" style="flex-shrink:0;" onclick="adjustWeight(this,5)">＋</button>' +
+      '</div>' +
+      '<input type="number" id="run-actual-2" placeholder="回数" style="flex:1;min-width:0;" value="' + (cur.reps || '') + '">' +
       '</div>';
   }
 
