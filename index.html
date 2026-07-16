@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ワークアウト">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
 <title>ワークアウト管理</title>
 <style>
   :root {
@@ -14,9 +16,9 @@
     --card: #ffffff;
     --border: #ddd5c4;
     --border-strong: #c2b7a0;
-    --text: #211d19;
-    --text-secondary: #5c564c;
-    --text-muted: #8c8577;
+    --text: #17140f;
+    --text-secondary: #46403a;
+    --text-muted: #736c60;
     --accent: #5fc22d;
     --accent-on: #ffffff;
     --accent-bg: #e3f5d8;
@@ -40,9 +42,9 @@
       --card: #242229;
       --border: #37343c;
       --border-strong: #4a4650;
-      --text: #f5f1eb;
-      --text-secondary: #ada79e;
-      --text-muted: #837d75;
+      --text: #fbf9f5;
+      --text-secondary: #c2bcb0;
+      --text-muted: #9c9587;
       --accent: #7ed94a;
       --accent-on: #10230a;
       --accent-bg: #223a16;
@@ -81,68 +83,68 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
   }
-  header .titles p:first-child { margin: 0; font-size: 14px; color: var(--text-muted); }
-  header .titles p:last-child { margin: 3px 0 0; font-size: 24px; font-weight: 700; }
+  header .titles p:first-child { margin: 0; font-size: 15px; color: var(--text-secondary); font-weight: 500; }
+  header .titles p:last-child { margin: 3px 0 0; font-size: 27px; font-weight: 800; }
   header button.icon-btn {
     background: none; border: none; padding: 8px; color: var(--text-secondary);
-    font-size: 24px; line-height: 1; cursor: pointer;
+    font-size: 26px; line-height: 1; cursor: pointer;
   }
-  main { flex: 1; padding: 0 16px 28px; font-size: 16px; }
+  main { flex: 1; padding: 0 16px 28px; font-size: 17px; }
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    padding: 16px; margin-bottom: 14px;
+    padding: 18px; margin-bottom: 16px;
   }
   .row { display: flex; gap: 10px; }
   .stat {
-    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 13px 14px;
   }
-  .stat p:first-child { margin: 0; font-size: 13px; color: var(--text-secondary); font-weight: 500; }
-  .stat p:last-child { margin: 4px 0 0; font-size: 22px; font-weight: 700; }
-  .stat .unit { font-size: 13px; font-weight: 500; }
+  .stat p:first-child { margin: 0; font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+  .stat p:last-child { margin: 5px 0 0; font-size: 26px; font-weight: 800; }
+  .stat .unit { font-size: 15px; font-weight: 600; }
   input, select {
-    width: 100%; height: 46px; border: 1px solid var(--border-strong); border-radius: 8px;
-    background: var(--card); color: var(--text); font-size: 17px; padding: 0 12px;
+    width: 100%; height: 50px; border: 1px solid var(--border-strong); border-radius: 8px;
+    background: var(--card); color: var(--text); font-size: 18px; padding: 0 12px;
   }
   input:focus, select:focus { outline: none; border-color: var(--accent); border-width: 2px; }
   input[type="checkbox"] { width: auto; height: auto; }
-  label.field-label { font-size: 13px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px; letter-spacing: 0.02em; }
+  label.field-label { font-size: 14px; color: var(--text-secondary); font-weight: 700; display: block; margin-bottom: 7px; letter-spacing: 0.02em; }
   button.primary {
     background: var(--accent); color: var(--accent-on); border: none; border-radius: 10px;
-    padding: 15px; font-size: 17px; font-weight: 700; width: 100%; cursor: pointer;
+    padding: 16px; font-size: 19px; font-weight: 800; width: 100%; cursor: pointer;
   }
   button.secondary {
     background: var(--bg); border: 1px solid var(--border-strong); color: var(--text);
-    border-radius: 10px; padding: 15px; font-size: 17px; font-weight: 600; width: 100%; cursor: pointer;
+    border-radius: 10px; padding: 16px; font-size: 19px; font-weight: 700; width: 100%; cursor: pointer;
   }
   button.ghost {
-    background: none; border: none; color: var(--text-secondary); font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px;
+    background: none; border: none; color: var(--text-secondary); font-size: 16px; font-weight: 700; cursor: pointer; padding: 8px;
   }
   .exercise-card {
-    border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 13px 15px; margin-bottom: 10px;
   }
   .exercise-card .head { display: flex; justify-content: space-between; align-items: center; }
-  .exercise-card .name { font-size: 17px; font-weight: 700; }
+  .exercise-card .name { font-size: 19px; font-weight: 800; }
   .badge {
-    font-size: 13px; font-weight: 600; background: var(--green-bg); color: var(--green-text);
-    padding: 4px 11px; border-radius: 10px; white-space: nowrap;
+    font-size: 14px; font-weight: 700; background: var(--green-bg); color: var(--green-text);
+    padding: 4px 12px; border-radius: 10px; white-space: nowrap;
   }
   .badge-cardio { background: var(--blue-bg); color: var(--blue-text); }
   .badge-reps { background: var(--purple-bg); color: var(--purple-text); }
   .machine-row {
-    display: flex; align-items: center; gap: 8px; padding: 12px;
+    display: flex; align-items: center; gap: 8px; padding: 13px 12px;
     border-bottom: 1px solid var(--border);
   }
   .machine-row:last-child { border-bottom: none; }
-  .machine-row .mname { flex: 1; font-size: 16px; font-weight: 500; }
+  .machine-row .mname { flex: 1; font-size: 17px; font-weight: 600; }
   .type-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
   .type-toggle button {
-    flex: 1; padding: 10px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-strong);
+    flex: 1; padding: 11px; font-size: 15px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-strong);
     background: var(--bg); color: var(--text-secondary); cursor: pointer;
   }
   .type-toggle button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
-  .exercise-card .sets { margin: 8px 0 0; font-size: 15px; color: var(--text-secondary); font-weight: 500; }
-  .exercise-card .del { color: var(--coral); font-size: 14px; font-weight: 600; float: right; cursor: pointer; }
+  .exercise-card .sets { margin: 8px 0 0; font-size: 16px; color: var(--text-secondary); font-weight: 600; }
+  .exercise-card .del { color: var(--coral); font-size: 15px; font-weight: 700; float: right; cursor: pointer; }
   nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--card); border-top: 1px solid var(--border);
@@ -155,12 +157,12 @@
     flex: 1; text-align: center; padding: 10px 0; color: var(--text-muted); cursor: pointer;
   }
   nav .tab.active { color: var(--accent); }
-  nav .tab .ic { font-size: 24px; display: block; }
-  nav .tab p { margin: 3px 0 0; font-size: 12px; font-weight: 600; }
+  nav .tab .ic { font-size: 25px; display: block; }
+  nav .tab p { margin: 4px 0 0; font-size: 13px; font-weight: 700; }
   .screen { display: none; }
   .screen.active { display: block; }
   .empty {
-    text-align: center; color: var(--text-muted); font-size: 15px; padding: 32px 10px;
+    text-align: center; color: var(--text-muted); font-size: 16px; padding: 32px 10px;
   }
   .modal-backdrop {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
@@ -172,40 +174,40 @@
     padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
     max-height: 85vh; overflow-y: auto;
   }
-  .modal-sheet h3 { margin: 0 0 16px; font-size: 20px; font-weight: 700; }
-  .modal-sheet .close { float: right; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+  .modal-sheet h3 { margin: 0 0 16px; font-size: 23px; font-weight: 800; }
+  .modal-sheet .close { float: right; color: var(--text-muted); font-size: 26px; cursor: pointer; }
   .set-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .set-row span { font-size: 14px; color: var(--text-secondary); font-weight: 600; width: 52px; flex-shrink: 0; }
+  .set-row span { font-size: 15px; color: var(--text-secondary); font-weight: 700; width: 54px; flex-shrink: 0; }
   .stepper { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
   .stepper input { text-align: center; }
   .step-btn {
-    width: 38px; height: 38px; flex-shrink: 0; padding: 0; border-radius: 8px;
+    width: 40px; height: 40px; flex-shrink: 0; padding: 0; border-radius: 8px;
     border: 1px solid var(--border-strong); background: var(--bg); color: var(--text);
-    font-size: 19px; font-weight: 700; cursor: pointer; line-height: 1;
+    font-size: 21px; font-weight: 800; cursor: pointer; line-height: 1;
   }
   .step-btn:active { background: var(--border); }
   .list-item {
-    display: flex; align-items: center; gap: 10px; padding: 11px 4px;
+    display: flex; align-items: center; gap: 10px; padding: 12px 4px;
     border-bottom: 1px solid var(--border);
   }
   .list-item:last-child { border-bottom: none; }
   .list-item .lt { flex: 1; }
-  .list-item .lt p:first-child { margin: 0; font-size: 16px; font-weight: 600; }
-  .list-item .lt p:last-child { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+  .list-item .lt p:first-child { margin: 0; font-size: 18px; font-weight: 700; }
+  .list-item .lt p:last-child { margin: 2px 0 0; font-size: 14px; color: var(--text-muted); font-weight: 500; }
   .warn-box {
-    background: var(--amber-bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--amber);
-    line-height: 1.6;
+    background: var(--amber-bg); border-radius: 8px; padding: 11px 13px; font-size: 14px; color: var(--amber);
+    line-height: 1.6; font-weight: 500;
   }
   .timer-circle { text-align: center; margin: 8px 0; }
   .seg { display: flex; gap: 8px; margin-bottom: 14px; }
-  .seg button { flex: 1; padding: 10px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-secondary); }
+  .seg button { flex: 1; padding: 11px; font-size: 15px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-secondary); }
   .seg button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
-  .check-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; font-size: 16px; font-weight: 500; border-bottom: 1px solid var(--border); }
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 17px; font-weight: 600; border-bottom: 1px solid var(--border); }
   .check-row:last-child { border-bottom: none; }
-  .assess-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .assess-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border); }
   .assess-row:last-child { border-bottom: none; }
-  .assess-row .label { font-size: 15px; color: var(--text-secondary); font-weight: 500; }
-  .assess-row .value { font-size: 16px; font-weight: 700; }
+  .assess-row .label { font-size: 16px; color: var(--text-secondary); font-weight: 600; }
+  .assess-row .value { font-size: 18px; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -214,7 +216,7 @@
   <header>
     <div class="titles">
       <p id="header-date"></p>
-      <p id="header-title">トレ結果</p>
+      <p id="header-title">トレ</p>
     </div>
     <button class="icon-btn" onclick="openSettings()">⚙</button>
   </header>
@@ -244,7 +246,7 @@
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <button class="ghost" onclick="shiftCalendarMonth(-1)">‹ 前月</button>
-          <p id="res-calendar-label" style="font-weight:600;font-size:15px;margin:0;"></p>
+          <p id="res-calendar-label" style="font-weight:600;font-size:17px;margin:0;"></p>
           <button class="ghost" onclick="shiftCalendarMonth(1)">翌月 ›</button>
         </div>
         <div id="res-calendar"></div>
@@ -277,11 +279,11 @@
       <div class="row" style="margin-bottom:12px;">
         <div class="stat">
           <p>体重</p><p id="body-weight-latest">-<span class="unit">kg</span></p>
-          <p id="body-weight-diff" style="font-size:13px;margin-top:2px;"></p>
+          <p id="body-weight-diff" style="font-size:15px;margin-top:2px;"></p>
         </div>
         <div class="stat">
           <p>体脂肪率</p><p id="body-fat-latest">-<span class="unit">%</span></p>
-          <p id="body-fat-diff" style="font-size:13px;margin-top:2px;"></p>
+          <p id="body-fat-diff" style="font-size:15px;margin-top:2px;"></p>
         </div>
       </div>
       <div class="card">
@@ -322,7 +324,7 @@
   <nav>
     <div class="inner">
       <div class="tab active" data-screen="progress" onclick="showScreen('progress')">
-        <span class="ic">📈</span><p>トレ結果</p>
+        <span class="ic">📈</span><p>トレ</p>
       </div>
       <div class="tab" data-screen="record" onclick="showScreen('record')">
         <span class="ic">🏋</span><p>記録</p>
@@ -373,7 +375,7 @@
   <div class="modal-sheet">
     <span class="close" onclick="closeModal('modal-start-plan')">×</span>
     <h3>実施する種目を選択</h3>
-    <p id="start-plan-name" style="font-size:16px;color:var(--text-secondary);margin:0 0 12px;"></p>
+    <p id="start-plan-name" style="font-size:18px;color:var(--text-secondary);margin:0 0 12px;"></p>
     <div id="start-plan-exercises" style="margin-bottom:16px;"></div>
     <button class="primary" onclick="confirmStartPlan()">この内容で開始</button>
   </div>
@@ -383,7 +385,7 @@
   <div class="modal-sheet">
     <span class="close" onclick="closeModal('modal-schedule-plan')">×</span>
     <h3>予定を入れる</h3>
-    <p id="schedule-plan-name" style="font-size:15px;color:var(--text-secondary);margin:0 0 12px;"></p>
+    <p id="schedule-plan-name" style="font-size:17px;color:var(--text-secondary);margin:0 0 12px;"></p>
     <label class="field-label">日付</label>
     <input type="date" id="schedule-date-input" style="margin-bottom:16px;">
     <button class="primary" onclick="saveSchedule()">この日に予定する</button>
@@ -518,7 +520,7 @@ function showScreen(name) {
   document.querySelectorAll('nav .tab').forEach(t => t.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
   document.querySelector('nav .tab[data-screen="' + name + '"]').classList.add('active');
-  const titles = { record: '記録', progress: 'トレ結果', body: 'からだ', plan: 'プラン' };
+  const titles = { record: '記録', progress: 'トレ', body: 'からだ', plan: 'プラン' };
   document.getElementById('header-title').textContent = titles[name];
   if (name === 'record') renderRecord();
   if (name === 'progress') renderTrainingResults();
@@ -768,7 +770,7 @@ function renderResultsCalendar() {
 
   const dow = ['日','月','火','水','木','金','土'];
   let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">' +
-    dow.map((d, i) => '<div style="text-align:center;font-size:14px;color:' + (i === 0 ? 'var(--coral)' : i === 6 ? 'var(--blue-text)' : 'var(--text-muted)') + ';">' + d + '</div>').join('') +
+    dow.map((d, i) => '<div style="text-align:center;font-size:16px;color:' + (i === 0 ? 'var(--coral)' : i === 6 ? 'var(--blue-text)' : 'var(--text-muted)') + ';">' + d + '</div>').join('') +
     '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
 
   for (let i = 0; i < firstWeekday; i++) html += '<div></div>';
@@ -789,7 +791,7 @@ function renderResultsCalendar() {
       fg = 'var(--text-muted)';
     }
     const border = dateStr === selectedResultDate ? '2px solid var(--accent)' : (dateStr === today ? '1px solid var(--border-strong)' : 'none');
-    html += '<div onclick="selectResultDay(\'' + dateStr + '\')" style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + '</div>';
+    html += '<div onclick="selectResultDay(\'' + dateStr + '\')" style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + '</div>';
   }
   html += '</div>';
   document.getElementById('res-calendar').innerHTML = html;
@@ -893,7 +895,7 @@ function renderBestList() {
   el.innerHTML = bests.length === 0
     ? '<div class="empty">今月の自己ベスト更新はまだありません</div>'
     : bests.map(b =>
-        '<div class="list-item"><span style="color:var(--accent);font-size:18px;">🏆</span><div class="lt"><p>' + escapeHtml(b.name) + '</p><p>' + b.value + b.unit + ' (' + fmtDateLabel(b.date) + ')</p></div></div>'
+        '<div class="list-item"><span style="color:var(--accent);font-size:20px;">🏆</span><div class="lt"><p>' + escapeHtml(b.name) + '</p><p>' + b.value + b.unit + ' (' + fmtDateLabel(b.date) + ')</p></div></div>'
       ).join('');
 }
 
@@ -946,7 +948,7 @@ function lineChartSvg(points) {
     '<line x1="' + padL + '" y1="' + (h-padB) + '" x2="' + (w-padR) + '" y2="' + (h-padB) + '" stroke="var(--border-strong)" stroke-width="0.5"/>' +
     '<polyline points="' + poly + '" fill="none" stroke="var(--green)" stroke-width="2"/>' +
     '<circle cx="' + last.x + '" cy="' + last.y + '" r="3.5" fill="var(--green)"/>' +
-    '<text x="' + last.x + '" y="' + (last.y - 8) + '" text-anchor="end" font-size="13" fill="var(--text)">' + last.label + last.unit + '</text>' +
+    '<text x="' + last.x + '" y="' + (last.y - 8) + '" text-anchor="end" font-size="15" fill="var(--text)">' + last.label + last.unit + '</text>' +
     '</svg>';
 }
 
@@ -1055,17 +1057,17 @@ function bodyDualChartSvg(logs) {
       const lastF = fatCoords[fatCoords.length - 1];
       fatPart = '<polyline points="' + fatPoly + '" fill="none" stroke="var(--coral)" stroke-width="2" stroke-dasharray="4 3"/>' +
         '<circle cx="' + lastF.x + '" cy="' + lastF.y + '" r="3" fill="var(--coral)"/>' +
-        '<text x="' + lastF.x + '" y="' + (h - 4) + '" text-anchor="end" font-size="12" fill="var(--coral)">' + logs[logs.length-1].fat + '%</text>';
+        '<text x="' + lastF.x + '" y="' + (h - 4) + '" text-anchor="end" font-size="14" fill="var(--coral)">' + logs[logs.length-1].fat + '%</text>';
     }
   }
 
-  return '<div style="display:flex;gap:10px;font-size:12px;margin-bottom:6px;">' +
+  return '<div style="display:flex;gap:10px;font-size:14px;margin-bottom:6px;">' +
     '<span style="color:var(--purple);">● 体重</span><span style="color:var(--coral);">● 体脂肪率</span></div>' +
     '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
     '<line x1="' + padL + '" y1="' + (h-padB) + '" x2="' + (w-padR) + '" y2="' + (h-padB) + '" stroke="var(--border-strong)" stroke-width="0.5"/>' +
     '<polyline points="' + weightPoly + '" fill="none" stroke="var(--purple)" stroke-width="2"/>' +
     '<circle cx="' + lastW.x + '" cy="' + lastW.y + '" r="3.5" fill="var(--purple)"/>' +
-    '<text x="' + lastW.x + '" y="' + (lastW.y - 8) + '" text-anchor="end" font-size="12" fill="var(--purple)">' + logs[logs.length-1].weight + 'kg</text>' +
+    '<text x="' + lastW.x + '" y="' + (lastW.y - 8) + '" text-anchor="end" font-size="14" fill="var(--purple)">' + logs[logs.length-1].weight + 'kg</text>' +
     fatPart +
     '</svg>';
 }
@@ -1130,9 +1132,9 @@ function renderPlanExFields(row, type, prefill) {
     fields.innerHTML = '<div class="row">' +
       '<input type="number" class="plan-ex-setcount" placeholder="セット数" style="flex:1;min-width:0;" value="' + setCount + '">' +
       '<div class="stepper" style="flex:1.6;min-width:0;">' +
-      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:15px;" onclick="adjustWeight(this,-5)">－</button>' +
+      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:17px;" onclick="adjustWeight(this,-5)">－</button>' +
       '<input type="number" step="5" class="plan-ex-weight" placeholder="kg" style="min-width:0;" value="' + (prefill && prefill.weight ? prefill.weight : '') + '">' +
-      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:15px;" onclick="adjustWeight(this,5)">＋</button>' +
+      '<button type="button" class="step-btn" style="width:28px;height:28px;flex-shrink:0;font-size:17px;" onclick="adjustWeight(this,5)">＋</button>' +
       '</div>' +
       '<input type="number" class="plan-ex-reps" placeholder="目標回数" style="flex:1;min-width:0;" value="' + (prefill && prefill.reps ? prefill.reps : '') + '">' +
       '</div>';
@@ -1196,14 +1198,12 @@ function renderPlanScreen() {
     list.innerHTML = plans.map(p =>
       '<div class="card">' +
       '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
-      '<span style="font-weight:600;font-size:16px;">' + escapeHtml(p.name) + '</span>' +
-      '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="deletePlan(\'' + p.id + '\')">削除</span>' +
+      '<span style="font-weight:600;font-size:18px;">' + escapeHtml(p.name) + '</span>' +
+      '<span class="del" style="color:var(--coral);font-size:18px;cursor:pointer;" onclick="deletePlan(\'' + p.id + '\')">削除</span>' +
       '</div>' +
-      '<p style="font-size:16px;color:var(--text-secondary);margin:6px 0 10px;">' + p.exercises.map(e => escapeHtml(e.name)).join(' / ') + '</p>' +
-      '<div class="row">' +
+      '<p style="font-size:18px;color:var(--text-secondary);margin:6px 0 10px;">' + p.exercises.map(e => escapeHtml(e.name)).join(' / ') + '</p>' +
+      '<button class="primary" style="margin-bottom:8px;" onclick="openSchedulePlan(\'' + p.id + '\')">📅 予定に追加</button>' +
       '<button class="secondary" onclick="openAddPlan(\'' + p.id + '\')">✎ 編集</button>' +
-      '<button class="primary" onclick="openSchedulePlan(\'' + p.id + '\')">📅 予定に追加</button>' +
-      '</div>' +
       '</div>'
     ).join('');
   }
@@ -1225,10 +1225,10 @@ function renderScheduleList() {
     const isToday = s.date === today;
     return '<div class="card" style="' + (isToday ? 'border:2px solid var(--accent);' : '') + '">' +
       '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
-      '<span style="font-size:14px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + '</span>' +
-      '<span class="del" style="color:var(--coral);font-size:14px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\')">削除</span>' +
+      '<span style="font-size:16px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + '</span>' +
+      '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\')">削除</span>' +
       '</div>' +
-      '<p style="font-weight:600;font-size:16px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
+      '<p style="font-weight:600;font-size:18px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
       (isToday ? '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\')">開始</button>' : '') +
       '</div>';
   }).join('');
@@ -1287,8 +1287,8 @@ function renderStartPlanList() {
       '<input type="checkbox" onchange="toggleStartEx(' + exIdx + ', this.checked)" ' + (startPlanChecked[exIdx] ? 'checked' : '') + '> ' + escapeHtml(ex.name) +
       '</label>' +
       '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-      '<button type="button" class="step-btn" style="width:30px;height:30px;font-size:16px;" onclick="moveStartEx(' + pos + ',-1)"' + (pos === 0 ? ' disabled' : '') + '>↑</button>' +
-      '<button type="button" class="step-btn" style="width:30px;height:30px;font-size:16px;" onclick="moveStartEx(' + pos + ',1)"' + (pos === startPlanOrder.length - 1 ? ' disabled' : '') + '>↓</button>' +
+      '<button type="button" class="step-btn" style="width:30px;height:30px;font-size:18px;" onclick="moveStartEx(' + pos + ',-1)"' + (pos === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button type="button" class="step-btn" style="width:30px;height:30px;font-size:18px;" onclick="moveStartEx(' + pos + ',1)"' + (pos === startPlanOrder.length - 1 ? ' disabled' : '') + '>↓</button>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -1360,7 +1360,7 @@ function renderPlanRun() {
   }).join('');
 
   if (activeRun.currentIndex === -1) {
-    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:17px;font-weight:600;">プラン完了 🎉</p>' +
+    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;">プラン完了 🎉</p>' +
       '<button class="primary" onclick="finishPlan()">終了する</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
@@ -1418,9 +1418,9 @@ function renderPlanRun() {
 
   view.innerHTML =
     '<div class="card">' +
-    '<p style="margin:0;font-size:13px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) + '</p>' +
-    '<p style="margin:2px 0 0;font-size:16px;font-weight:600;">' + escapeHtml(cur.name) + '</p>' +
-    '<p style="margin:2px 0 10px;font-size:14px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
+    '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) + '</p>' +
+    '<p style="margin:2px 0 0;font-size:18px;font-weight:600;">' + escapeHtml(cur.name) + '</p>' +
+    '<p style="margin:2px 0 10px;font-size:16px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
     '<label class="field-label">実際の記録</label>' +
     actualFieldsHtml +
     '<div class="timer-circle">' +
@@ -1429,7 +1429,7 @@ function renderPlanRun() {
     '<circle id="timer-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" ' +
       'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 60 60)"/>' +
     '<text id="timer-text" x="60" y="58" text-anchor="middle" font-size="24" font-weight="600" fill="var(--text)">' + mm + ':' + ss + '</text>' +
-    '<text x="60" y="76" text-anchor="middle" font-size="11" fill="var(--text-muted)">インターバル</text>' +
+    '<text x="60" y="76" text-anchor="middle" font-size="13" fill="var(--text-muted)">インターバル</text>' +
     '</svg>' +
     '</div>' +
     '<div class="row">' +
@@ -1576,7 +1576,7 @@ function renderMachineList() {
     '<div class="machine-row">' +
     '<span class="mname">' + escapeHtml(m.name) + '</span>' +
     '<span class="badge' + badgeClassFor(m.type) + '">' + typeLabel(m.type) + '</span>' +
-    '<span class="del" style="color:var(--coral);font-size:14px;cursor:pointer;" onclick="deleteMachine(\'' + m.id + '\')">削除</span>' +
+    '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="deleteMachine(\'' + m.id + '\')">削除</span>' +
     '</div>'
   ).join('');
 }
@@ -1618,7 +1618,7 @@ function openSettings() {
   openModal('modal-settings');
 }
 function rowLine(label, value) {
-  return '<div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0;">' +
+  return '<div style="display:flex;justify-content:space-between;font-size:16px;padding:3px 0;">' +
     '<span style="color:var(--text-secondary);">' + label + '</span><span style="font-weight:600;">' + value + '</span></div>';
 }
 
