@@ -1078,11 +1078,8 @@ function bodyDualChartSvg(logs) {
   let weightDots = '';
   if (showDots) weightDots = weightCoords.map(c => '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--purple)"/>').join('');
 
-  // 最新値ラベル（枠内に収まるように位置を調整）
-  const wLabelY = Math.max(padT + 4, Math.min(lastW.y - 10, h - padB - 6));
-  const weightLabel = '<text x="' + Math.min(lastW.x - 4, w - padR - 4) + '" y="' + wLabelY + '" text-anchor="end" font-size="16" font-weight="800" fill="var(--purple)">' + lastLog.weight + 'kg</text>';
-
   let fatPart = '';
+  let lastFatVal = null;
   if (fats.length > 0) {
     const fy = v => padT + plotH * (1 - (v - fLo) / (fHi - fLo));
     const fatCoords = logs.map((l, i) => {
@@ -1092,27 +1089,23 @@ function bodyDualChartSvg(logs) {
     if (fatCoords.length > 0) {
       const fatPoly = fatCoords.map(c => c.x + ',' + c.y).join(' ');
       const lastF = fatCoords[fatCoords.length - 1];
-      const lastFatVal = [...logs].reverse().find(l => l.fat != null).fat;
-      let fLabelY = Math.max(padT + 4, Math.min(lastF.y + 22, h - padB - 6));
-      // 体重ラベルと重なる場合は上下にずらす
-      if (Math.abs(fLabelY - wLabelY) < 20) {
-        fLabelY = wLabelY + 20 <= h - padB - 6 ? wLabelY + 20 : Math.max(padT + 4, wLabelY - 20);
-      }
+      lastFatVal = [...logs].reverse().find(l => l.fat != null).fat;
       fatPart = '<polyline points="' + fatPoly + '" fill="none" stroke="var(--coral)" stroke-width="2.5" stroke-dasharray="5 4"/>' +
         (showDots ? fatCoords.map(c => '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--coral)"/>').join('') : '') +
-        '<circle cx="' + lastF.x + '" cy="' + lastF.y + '" r="4.5" fill="var(--coral)"/>' +
-        '<text x="' + Math.min(lastF.x - 4, w - padR - 4) + '" y="' + fLabelY + '" text-anchor="end" font-size="16" font-weight="800" fill="var(--coral)">' + lastFatVal + '%</text>';
+        '<circle cx="' + lastF.x + '" cy="' + lastF.y + '" r="4.5" fill="var(--coral)"/>';
     }
   }
 
+  // 最新値は線に被らないよう凡例側に表示する
   return '<div style="display:flex;gap:14px;font-size:15px;font-weight:700;margin-bottom:6px;">' +
-    '<span style="color:var(--purple);white-space:nowrap;">━ 体重kg（左）</span><span style="color:var(--coral);white-space:nowrap;">┅ 体脂肪率%（右）</span></div>' +
+    '<span style="color:var(--purple);white-space:nowrap;">━ 体重 ' + lastLog.weight + 'kg（左）</span>' +
+    (lastFatVal != null ? '<span style="color:var(--coral);white-space:nowrap;">┅ 体脂肪率 ' + lastFatVal + '%（右）</span>' : '<span style="color:var(--coral);white-space:nowrap;">┅ 体脂肪率%（右）</span>') +
+    '</div>' +
     '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
     grid +
     '<polyline points="' + weightPoly + '" fill="none" stroke="var(--purple)" stroke-width="2.5"/>' +
     weightDots +
     '<circle cx="' + lastW.x + '" cy="' + lastW.y + '" r="4.5" fill="var(--purple)"/>' +
-    weightLabel +
     fatPart +
     '</svg>';
 }
