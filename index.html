@@ -1015,7 +1015,7 @@ function bodyDualChartSvg(logs) {
 
   // 体重は2kg刻みの目盛でグリッド線を引く。体脂肪率は右側に独立した目盛を表示
   function weightTicks(lo, hi) {
-    const step = 2;
+    const step = 1;
     const start = Math.ceil(lo / step) * step;
     const ticks = [];
     for (let v = start; v <= hi; v += step) ticks.push(v);
@@ -1241,7 +1241,9 @@ function renderScheduleList() {
       '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\')">削除</span>' +
       '</div>' +
       '<p style="font-weight:600;font-size:18px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
-      (isToday ? '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\')">開始</button>' : '') +
+      (isToday ? (s.completed
+        ? '<span class="badge" style="display:inline-block;">実施済</span>'
+        : '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\', \'' + s.date + '\')">開始</button>') : '') +
       '</div>';
   }).join('');
 }
@@ -1273,12 +1275,14 @@ function removeSchedule(date) {
 }
 
 let startPlanTargetId = null;
+let startPlanTargetScheduleDate = null;
 
 let startPlanOrder = [];
 let startPlanChecked = {};
 
-function openStartPlanModal(planId) {
+function openStartPlanModal(planId, scheduleDate) {
   startPlanTargetId = planId;
+  startPlanTargetScheduleDate = scheduleDate || null;
   const plan = plans.find(p => p.id === planId);
   if (!plan) return;
   startPlanOrder = plan.exercises.map((_, i) => i);
@@ -1323,10 +1327,10 @@ function confirmStartPlan() {
   const selected = startPlanOrder.filter(i => startPlanChecked[i]);
   if (selected.length === 0) { alert('種目を1つ以上選択してください'); return; }
   closeModal('modal-start-plan');
-  startPlan(startPlanTargetId, selected);
+  startPlan(startPlanTargetId, selected, startPlanTargetScheduleDate);
 }
 
-function startPlan(id, selectedIndexes) {
+function startPlan(id, selectedIndexes, scheduleDate) {
   const plan = plans.find(p => p.id === id);
   if (!plan) return;
   const exercisesToUse = selectedIndexes ? selectedIndexes.map(i => plan.exercises[i]) : plan.exercises;
@@ -1343,7 +1347,7 @@ function startPlan(id, selectedIndexes) {
       }
     }
   });
-  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now() };
+  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now(), scheduleDate: scheduleDate || null };
   saveActiveRun();
   renderPlanScreen();
 }
@@ -1497,6 +1501,10 @@ function completePlanRun() {
   const durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
   planHistory.push({ id: uid(), planName: activeRun.planName, date: todayStr(), durationMin, status: 'completed' });
   savePlanHistory();
+  if (activeRun.scheduleDate) {
+    const sched = scheduledPlans.find(s => s.date === activeRun.scheduleDate);
+    if (sched) { sched.completed = true; saveScheduledPlans(); }
+  }
   finishPlan();
 }
 
