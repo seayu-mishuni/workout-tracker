@@ -198,7 +198,6 @@
     background: var(--amber-bg); border-radius: 8px; padding: 11px 13px; font-size: 14px; color: var(--amber);
     line-height: 1.6; font-weight: 500;
   }
-  .timer-circle { text-align: center; margin: 8px 0; }
   .seg { display: flex; gap: 8px; margin-bottom: 14px; }
   .seg button { flex: 1; padding: 11px; font-size: 15px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-secondary); }
   .seg button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
@@ -241,6 +240,10 @@
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
         </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="stat"><p>総セット数</p><p id="res-total-sets">0</p></div>
+          <div class="stat"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
+        </div>
       </div>
 
       <div class="card">
@@ -261,12 +264,6 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">自己ベスト更新</p>
         <div id="res-best-list"></div>
-      </div>
-
-      <div class="card">
-        <label class="field-label">種目別の重量推移</label>
-        <select id="res-exercise" onchange="renderExerciseTrend()" style="margin-bottom:10px;"></select>
-        <div id="res-exercise-chart"></div>
       </div>
 
       <div class="card">
@@ -486,6 +483,7 @@ if (!plans) {
 let activeRun = store.get('activeRun', null);
 if (activeRun && !activeRun.doneIndices) activeRun.doneIndices = [];
 let scheduledPlans = store.get('scheduledPlans', []);
+let planHistory = store.get('planHistory', []);
 let machines = store.get('machines', null);
 if (!machines) {
   machines = DEFAULT_MACHINES.map(m => ({ id: uid(), name: m.name, type: m.type }));
@@ -507,6 +505,7 @@ function savePlans() { store.set('plans', plans); }
 function saveActiveRun() { store.set('activeRun', activeRun); }
 function saveMachines() { store.set('machines', machines); }
 function saveScheduledPlans() { store.set('scheduledPlans', scheduledPlans); }
+function savePlanHistory() { store.set('planHistory', planHistory); }
 
 function machineType(name) {
   const m = machines.find(m => m.name === name);
@@ -805,8 +804,6 @@ function renderTrainingResults() {
   renderResultsSummary();
   renderAssessment();
   renderBestList();
-  renderExerciseTrendSelect();
-  renderExerciseTrend();
   renderResultsBodyChart();
 }
 
@@ -814,12 +811,23 @@ function renderResultsSummary() {
   const thisMonth = todayStr().slice(0, 7);
   const logsThisMonth = workoutLogs.filter(l => monthKey(l.date) === thisMonth);
   const daysWithLogs = new Set(logsThisMonth.map(l => l.date)).size;
-  let totalVolume = 0;
+  let totalVolume = 0, totalSets = 0;
   logsThisMonth.forEach(l => {
+    totalSets += l.sets.length;
     if (isStrengthLog(l)) totalVolume += l.sets.reduce((s, x) => s + x.weight * x.reps, 0);
   });
   document.getElementById('res-count').textContent = daysWithLogs + '日';
   document.getElementById('res-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
+  document.getElementById('res-total-sets').textContent = totalSets;
+
+  const historyThisMonth = planHistory.filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth);
+  const avgEl = document.getElementById('res-avg-duration');
+  if (historyThisMonth.length > 0) {
+    const avgMin = Math.round(historyThisMonth.reduce((s, h) => s + h.durationMin, 0) / historyThisMonth.length);
+    avgEl.innerHTML = avgMin + '<span class="unit">分</span>';
+  } else {
+    avgEl.textContent = '-';
+  }
 }
 
 function monthlyVolume(mk) {
@@ -899,28 +907,6 @@ function renderBestList() {
       ).join('');
 }
 
-function renderExerciseTrendSelect() {
-  const sel = document.getElementById('res-exercise');
-  const names = allExerciseNames();
-  const prev = sel.value;
-  sel.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
-  if (names.includes(prev)) sel.value = prev;
-}
-
-function renderExerciseTrend() {
-  const sel = document.getElementById('res-exercise');
-  const exercise = sel.value;
-  const chartEl = document.getElementById('res-exercise-chart');
-  if (!exercise) { chartEl.innerHTML = '<div class="empty">まだ記録がありません</div>'; return; }
-  const logs = workoutLogs.filter(l => l.exercise === exercise).sort((a, b) => a.date.localeCompare(b.date));
-  const type = logs.length ? logs[logs.length - 1].type : 'strength';
-  let points;
-  if (type === 'cardio') points = logs.map(l => ({ date: l.date, max: round1(l.sets.reduce((s, x) => s + (x.duration || 0), 0)), unit: '分' }));
-  else if (type === 'reps') points = logs.map(l => ({ date: l.date, max: Math.max(...l.sets.map(s => s.reps)), unit: '回' }));
-  else points = logs.map(l => ({ date: l.date, max: Math.max(...l.sets.map(s => s.weight)), unit: 'kg' }));
-  chartEl.innerHTML = lineChartSvg(points);
-}
-
 function renderResultsBodyChart() {
   const sorted = [...bodyLogs].sort((a, b) => a.date.localeCompare(b.date));
   const cutoff = new Date();
@@ -928,28 +914,6 @@ function renderResultsBodyChart() {
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const inRange = sorted.filter(b => b.date >= cutoffStr);
   document.getElementById('res-body-chart').innerHTML = bodyDualChartSvg(inRange);
-}
-
-function lineChartSvg(points) {
-  if (points.length === 0) return '<div class="empty">データがありません</div>';
-  const w = 320, h = 110, padL = 30, padR = 10, padT = 14, padB = 20;
-  const values = points.map(p => p.max);
-  const min = Math.min(...values), max = Math.max(...values);
-  const range = max - min || 1;
-  const step = points.length > 1 ? (w - padL - padR) / (points.length - 1) : 0;
-  const coords = points.map((p, i) => {
-    const x = padL + step * i;
-    const y = padT + (h - padT - padB) * (1 - (p.max - min) / range);
-    return { x, y, label: p.max, unit: p.unit || '' };
-  });
-  const poly = coords.map(c => c.x + ',' + c.y).join(' ');
-  const last = coords[coords.length - 1];
-  return '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
-    '<line x1="' + padL + '" y1="' + (h-padB) + '" x2="' + (w-padR) + '" y2="' + (h-padB) + '" stroke="var(--border-strong)" stroke-width="0.5"/>' +
-    '<polyline points="' + poly + '" fill="none" stroke="var(--green)" stroke-width="2"/>' +
-    '<circle cx="' + last.x + '" cy="' + last.y + '" r="3.5" fill="var(--green)"/>' +
-    '<text x="' + last.x + '" y="' + (last.y - 8) + '" text-anchor="end" font-size="15" fill="var(--text)">' + last.label + last.unit + '</text>' +
-    '</svg>';
 }
 
 /* ---------- からだ ---------- */
@@ -1049,20 +1013,30 @@ function bodyDualChartSvg(logs) {
     return parseInt(dateStr.slice(5, 7), 10) + '/' + parseInt(dateStr.slice(8, 10), 10);
   }
 
-  // 横グリッド線（上・中・下）と左右の目盛り
+  // 体重は2kg刻みの目盛でグリッド線を引く。体脂肪率は右側に独立した目盛を表示
+  function weightTicks(lo, hi) {
+    const step = 2;
+    const start = Math.ceil(lo / step) * step;
+    const ticks = [];
+    for (let v = start; v <= hi; v += step) ticks.push(v);
+    if (ticks.length === 0) ticks.push(Math.round((lo + hi) / 2 / step) * step);
+    return ticks;
+  }
   let grid = '';
   let fLo = 0, fHi = 0;
   if (fats.length > 0) [fLo, fHi] = paddedRange(Math.min(...fats), Math.max(...fats));
-  [0, 0.5, 1].forEach(t => {
-    const y = padT + plotH * t;
+  weightTicks(wLo, wHi).forEach(v => {
+    const y = wy(v);
     grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border-strong)" stroke-width="1"/>';
-    const wVal = round1(wHi - (wHi - wLo) * t);
-    grid += '<text x="' + (padL - 6) + '" y="' + (y + 5) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--purple)">' + wVal + '</text>';
-    if (fats.length > 0) {
+    grid += '<text x="' + (padL - 6) + '" y="' + (y + 5) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--purple)">' + v + '</text>';
+  });
+  if (fats.length > 0) {
+    [0, 0.5, 1].forEach(t => {
+      const y = padT + plotH * t;
       const fVal = round1(fHi - (fHi - fLo) * t);
       grid += '<text x="' + (w - padR + 6) + '" y="' + (y + 5) + '" text-anchor="start" font-size="14" font-weight="700" fill="var(--coral)">' + fVal + '</text>';
-    }
-  });
+    });
+  }
 
   // 日付（最初と最後）
   const first = logs[0], lastLog = logs[logs.length - 1];
@@ -1369,12 +1343,10 @@ function startPlan(id, selectedIndexes) {
       }
     }
   });
-  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, timerRunning: false, timerRemaining: 90, timerTotal: 90 };
+  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now() };
   saveActiveRun();
   renderPlanScreen();
 }
-
-let timerInterval = null;
 
 function remainingQueueItems() {
   const doneSet = new Set(activeRun.doneIndices);
@@ -1392,14 +1364,14 @@ function renderPlanRun() {
       return '<div class="list-item"><span style="color:var(--green);">✓</span><div class="lt"><p style="text-decoration:line-through;color:var(--text-muted);">' + escapeHtml(item.name) + ' セット' + item.setIndex + '</p></div></div>';
     }
     if (i === activeRun.currentIndex) {
-      return '<div class="list-item"><span style="color:var(--accent);">●</span><div class="lt"><p>' + escapeHtml(item.name) + ' セット' + item.setIndex + '</p></div></div>';
+      return '<div class="list-item" style="background:var(--accent-bg);border-radius:8px;margin:0 -4px;padding:12px 8px;"><span style="color:var(--accent);font-size:20px;">▶</span><div class="lt"><p style="font-weight:800;">' + escapeHtml(item.name) + ' セット' + item.setIndex + '</p></div></div>';
     }
     return '<div class="list-item"><span style="color:var(--text-muted);">○</span><div class="lt"><p style="color:var(--text-secondary);">' + escapeHtml(item.name) + ' セット' + item.setIndex + '</p></div></div>';
   }).join('');
 
   if (activeRun.currentIndex === -1) {
     view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;">プラン完了 🎉</p>' +
-      '<button class="primary" onclick="finishPlan()">終了する</button></div>' +
+      '<button class="primary" onclick="completePlanRun()">終了する</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
   }
@@ -1423,12 +1395,6 @@ function renderPlanRun() {
   }
 
   const cur = activeRun.queue[activeRun.currentIndex];
-
-  const circumference = 2 * Math.PI * 52;
-  const pct = activeRun.timerTotal > 0 ? activeRun.timerRemaining / activeRun.timerTotal : 0;
-  const offset = circumference * (1 - pct);
-  const mm = Math.floor(Math.max(activeRun.timerRemaining,0) / 60);
-  const ss = String(Math.max(activeRun.timerRemaining,0) % 60).padStart(2, '0');
 
   let targetText, actualFieldsHtml;
   if (cur.type === 'cardio') {
@@ -1455,70 +1421,16 @@ function renderPlanRun() {
   }
 
   view.innerHTML =
-    '<div class="card">' +
+    '<div class="card" style="border:2px solid var(--accent);">' +
     '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) + '</p>' +
-    '<p style="margin:2px 0 0;font-size:18px;font-weight:600;">' + escapeHtml(cur.name) + '</p>' +
+    '<p style="margin:2px 0 0;font-size:21px;font-weight:800;">▶ ' + escapeHtml(cur.name) + '</p>' +
     '<p style="margin:2px 0 10px;font-size:16px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
     '<label class="field-label">実際の記録</label>' +
     actualFieldsHtml +
-    '<div class="timer-circle">' +
-    '<svg viewBox="0 0 120 120" style="width:130px;">' +
-    '<circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="6"/>' +
-    '<circle id="timer-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" ' +
-      'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 60 60)"/>' +
-    '<text id="timer-text" x="60" y="58" text-anchor="middle" font-size="24" font-weight="600" fill="var(--text)">' + mm + ':' + ss + '</text>' +
-    '<text x="60" y="76" text-anchor="middle" font-size="13" fill="var(--text-muted)">インターバル</text>' +
-    '</svg>' +
-    '</div>' +
-    '<div class="row">' +
-    '<button class="secondary" id="timer-toggle-btn" onclick="toggleTimer()">' + (activeRun.timerRunning ? '一時停止' : '再開') + '</button>' +
     '<button class="primary" onclick="nextSet()">次のセット</button>' +
-    '</div>' +
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
-}
-
-function updateTimerDisplay() {
-  if (!activeRun) return;
-  const circumference = 2 * Math.PI * 52;
-  const pct = activeRun.timerTotal > 0 ? activeRun.timerRemaining / activeRun.timerTotal : 0;
-  const offset = circumference * (1 - pct);
-  const mm = Math.floor(Math.max(activeRun.timerRemaining,0) / 60);
-  const ss = String(Math.max(activeRun.timerRemaining,0) % 60).padStart(2, '0');
-  const arc = document.getElementById('timer-arc');
-  const text = document.getElementById('timer-text');
-  if (arc) arc.setAttribute('stroke-dashoffset', offset);
-  if (text) text.textContent = mm + ':' + ss;
-}
-
-function toggleTimer() {
-  activeRun.timerRunning = !activeRun.timerRunning;
-  saveActiveRun();
-  if (activeRun.timerRunning) startTimerLoop(); else stopTimerLoop();
-  const btn = document.getElementById('timer-toggle-btn');
-  if (btn) btn.textContent = activeRun.timerRunning ? '一時停止' : '再開';
-}
-
-function startTimerLoop() {
-  stopTimerLoop();
-  timerInterval = setInterval(() => {
-    if (!activeRun || !activeRun.timerRunning) return;
-    activeRun.timerRemaining -= 1;
-    if (activeRun.timerRemaining <= 0) {
-      activeRun.timerRemaining = 0;
-      activeRun.timerRunning = false;
-      stopTimerLoop();
-      saveActiveRun();
-      renderPlanRun();
-      return;
-    }
-    saveActiveRun();
-    updateTimerDisplay();
-  }, 1000);
-}
-function stopTimerLoop() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
 
 function recordCurrentSet() {
@@ -1555,9 +1467,6 @@ function nextSet() {
   recordCurrentSet();
   const finishedName = activeRun.queue[activeRun.currentIndex].name;
   activeRun.doneIndices.push(activeRun.currentIndex);
-  activeRun.timerRemaining = activeRun.timerTotal;
-  activeRun.timerRunning = false;
-  stopTimerLoop();
 
   const remaining = remainingQueueItems();
   if (remaining.length === 0) {
@@ -1584,9 +1493,15 @@ function chooseNextExercise(name) {
   renderPlanRun();
 }
 
+function completePlanRun() {
+  const durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
+  planHistory.push({ id: uid(), planName: activeRun.planName, date: todayStr(), durationMin, status: 'completed' });
+  savePlanHistory();
+  finishPlan();
+}
+
 function finishPlan() {
   activeRun = null;
-  stopTimerLoop();
   saveActiveRun();
   renderPlanScreen();
 }
@@ -1722,6 +1637,28 @@ function resetAllData() {
   location.reload();
 }
 
+/* ---------- スワイプによるタブ切替 ---------- */
+
+const SCREEN_ORDER = ['progress', 'record', 'body', 'plan'];
+let swipeStartX = null, swipeStartY = null;
+const mainEl = document.querySelector('main');
+mainEl.addEventListener('touchstart', e => {
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+mainEl.addEventListener('touchend', e => {
+  if (swipeStartX === null) return;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  const dy = e.changedTouches[0].clientY - swipeStartY;
+  swipeStartX = null;
+  if (document.querySelector('.modal-backdrop.active')) return;
+  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  const current = document.querySelector('nav .tab.active').dataset.screen;
+  const idx = SCREEN_ORDER.indexOf(current);
+  if (dx < 0 && idx < SCREEN_ORDER.length - 1) showScreen(SCREEN_ORDER[idx + 1]);
+  else if (dx > 0 && idx > 0) showScreen(SCREEN_ORDER[idx - 1]);
+}, { passive: true });
+
 /* ---------- init ---------- */
 
 function renderAll() {
@@ -1731,7 +1668,6 @@ function renderAll() {
   renderPlanScreen();
 }
 
-if (activeRun) startTimerLoop();
 renderAll();
 </script>
 </body>
