@@ -241,7 +241,7 @@
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
         </div>
         <div class="row" style="margin-top:10px;">
-          <div class="stat"><p>総セット数</p><p id="res-total-sets">0</p></div>
+          <div class="stat"><p>部位別セット数</p><div id="res-parts-sets" style="margin-top:6px;font-size:15px;font-weight:700;line-height:1.6;">-</div></div>
           <div class="stat"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
         </div>
       </div>
@@ -402,6 +402,8 @@
         <button type="button" data-type="reps" onclick="setNewMachineType('reps')">回数のみ</button>
         <button type="button" data-type="cardio" onclick="setNewMachineType('cardio')">有酸素</button>
       </div>
+      <label class="field-label">部位</label>
+      <select id="machine-new-part" style="margin-bottom:8px;"></select>
       <button class="secondary" onclick="addMachine()">＋ マシンを追加</button>
     </div>
     <p class="field-label">データ管理</p>
@@ -451,15 +453,17 @@ function fmtDateLabel(dateStr) {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function round1(n) { return Math.round(n*10)/10; }
 
+const BODY_PARTS = ['胸', '背中', '脚', '肩', '腕', '腹', '有酸素', 'その他'];
+
 const DEFAULT_MACHINES = [
-  { name: 'トレッドミル', type: 'cardio' },
-  { name: 'ショルダープレス', type: 'strength' },
-  { name: 'チェストプレス', type: 'strength' },
-  { name: 'ラットプルダウン', type: 'strength' },
-  { name: 'レッグプレス', type: 'strength' },
-  { name: 'アダクション', type: 'strength' },
-  { name: 'アブダクション', type: 'strength' },
-  { name: 'アブベンチ', type: 'reps' }
+  { name: 'トレッドミル', type: 'cardio', part: '有酸素' },
+  { name: 'ショルダープレス', type: 'strength', part: '肩' },
+  { name: 'チェストプレス', type: 'strength', part: '胸' },
+  { name: 'ラットプルダウン', type: 'strength', part: '背中' },
+  { name: 'レッグプレス', type: 'strength', part: '脚' },
+  { name: 'アダクション', type: 'strength', part: '脚' },
+  { name: 'アブダクション', type: 'strength', part: '脚' },
+  { name: 'アブベンチ', type: 'reps', part: '腹' }
 ];
 
 const DEFAULT_PLANS = [
@@ -486,16 +490,21 @@ let scheduledPlans = store.get('scheduledPlans', []);
 let planHistory = store.get('planHistory', []);
 let machines = store.get('machines', null);
 if (!machines) {
-  machines = DEFAULT_MACHINES.map(m => ({ id: uid(), name: m.name, type: m.type }));
+  machines = DEFAULT_MACHINES.map(m => ({ id: uid(), name: m.name, type: m.type, part: m.part }));
   store.set('machines', machines);
 } else {
   let migrated = false;
   const abBench = machines.find(m => m.name === 'アブベンチ');
   if (abBench && abBench.type !== 'reps') { abBench.type = 'reps'; migrated = true; }
   if (!machines.find(m => m.name === 'レッグプレス')) {
-    machines.push({ id: uid(), name: 'レッグプレス', type: 'strength' });
+    machines.push({ id: uid(), name: 'レッグプレス', type: 'strength', part: '脚' });
     migrated = true;
   }
+  const defaultPartByName = {};
+  DEFAULT_MACHINES.forEach(m => { defaultPartByName[m.name] = m.part; });
+  machines.forEach(m => {
+    if (!m.part) { m.part = defaultPartByName[m.name] || 'その他'; migrated = true; }
+  });
   if (migrated) store.set('machines', machines);
 }
 
@@ -510,6 +519,11 @@ function savePlanHistory() { store.set('planHistory', planHistory); }
 function machineType(name) {
   const m = machines.find(m => m.name === name);
   return m ? m.type : 'strength';
+}
+
+function machinePart(name) {
+  const m = machines.find(m => m.name === name);
+  return m && m.part ? m.part : 'その他';
 }
 
 document.getElementById('header-date').textContent = fmtDateLabel(todayStr());
@@ -587,7 +601,16 @@ function renderRecord() {
 function deleteLog(id) {
   workoutLogs = workoutLogs.filter(l => l.id !== id);
   saveWorkoutLogs();
-  renderRecord();
+  const active = document.querySelector('.screen.active');
+  if (active && active.id === 'screen-progress') {
+    renderDayDetail();
+    renderResultsCalendar();
+    renderResultsSummary();
+    renderAssessment();
+    renderBestList();
+  } else {
+    renderRecord();
+  }
 }
 
 function escapeHtml(s) {
@@ -811,14 +834,17 @@ function renderResultsSummary() {
   const thisMonth = todayStr().slice(0, 7);
   const logsThisMonth = workoutLogs.filter(l => monthKey(l.date) === thisMonth);
   const daysWithLogs = new Set(logsThisMonth.map(l => l.date)).size;
-  let totalVolume = 0, totalSets = 0;
+  let totalVolume = 0;
+  const partCounts = {};
   logsThisMonth.forEach(l => {
-    totalSets += l.sets.length;
+    const part = machinePart(l.exercise);
+    partCounts[part] = (partCounts[part] || 0) + l.sets.length;
     if (isStrengthLog(l)) totalVolume += l.sets.reduce((s, x) => s + x.weight * x.reps, 0);
   });
   document.getElementById('res-count').textContent = daysWithLogs + '日';
   document.getElementById('res-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
-  document.getElementById('res-total-sets').textContent = totalSets;
+  const partsHtml = BODY_PARTS.filter(p => partCounts[p]).map(p => p + ' ' + partCounts[p]).join(' / ');
+  document.getElementById('res-parts-sets').textContent = partsHtml || '記録なし';
 
   const historyThisMonth = planHistory.filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth);
   const avgEl = document.getElementById('res-avg-duration');
@@ -1535,7 +1561,7 @@ function renderMachineList() {
   }
   list.innerHTML = machines.map(m =>
     '<div class="machine-row">' +
-    '<span class="mname">' + escapeHtml(m.name) + '</span>' +
+    '<span class="mname">' + escapeHtml(m.name) + ' <span style="color:var(--text-muted);font-weight:500;font-size:14px;">(' + (m.part || 'その他') + ')</span></span>' +
     '<span class="badge' + badgeClassFor(m.type) + '">' + typeLabel(m.type) + '</span>' +
     '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="deleteMachine(\'' + m.id + '\')">削除</span>' +
     '</div>'
@@ -1552,10 +1578,12 @@ function addMachine() {
   const input = document.getElementById('machine-new-title');
   const name = input.value.trim();
   if (!name) { alert('マシン名を入力してください'); return; }
-  machines.push({ id: uid(), name, type: newMachineType });
+  const part = document.getElementById('machine-new-part').value;
+  machines.push({ id: uid(), name, type: newMachineType, part });
   saveMachines();
   input.value = '';
   setNewMachineType('strength');
+  document.getElementById('machine-new-part').value = 'その他';
   renderMachineList();
 }
 
@@ -1569,6 +1597,11 @@ function deleteMachine(id) {
 
 function openSettings() {
   renderMachineList();
+  const partSel = document.getElementById('machine-new-part');
+  if (!partSel.options.length) {
+    partSel.innerHTML = BODY_PARTS.map(p => '<option value="' + p + '">' + p + '</option>').join('');
+    partSel.value = 'その他';
+  }
   document.getElementById('settings-counts').innerHTML =
     '<div class="row" style="flex-direction:column;gap:4px;">' +
     rowLine('ワークアウト記録', workoutLogs.length + '件') +
