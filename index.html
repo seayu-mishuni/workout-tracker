@@ -223,6 +223,11 @@
   <main>
 
     <section id="screen-record" class="screen">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <button class="ghost" onclick="shiftRecordDate(-1)">‹ 前日</button>
+        <p id="rec-date-label" style="font-weight:600;font-size:17px;margin:0;cursor:pointer;" onclick="jumpRecordToday()"></p>
+        <button class="ghost" onclick="shiftRecordDate(1)">翌日 ›</button>
+      </div>
       <div class="card">
         <div class="row">
           <div class="stat"><p>総ボリューム</p><p id="rec-volume">0<span class="unit">kg</span></p></div>
@@ -230,7 +235,7 @@
         </div>
       </div>
       <div id="rec-list"></div>
-      <button class="primary" onclick="openAddExercise()">＋ 種目を追加</button>
+      <button class="primary" onclick="openAddExercise(recordViewDate)">＋ 種目を追加</button>
     </section>
 
     <section id="screen-progress" class="screen active">
@@ -342,7 +347,7 @@
     <span class="close" onclick="closeModal('modal-add-exercise')">×</span>
     <h3>種目を追加</h3>
     <label class="field-label">種目名</label>
-    <input type="text" id="ex-title" placeholder="例: ベンチプレス" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;" oninput="onExNameInput()">
+    <select id="ex-title" style="margin-bottom:12px;" onchange="onExNameInput()"></select>
     <datalist id="ex-name-history"></datalist>
     <label class="field-label">種別</label>
     <div class="type-toggle" id="ex-type-toggle">
@@ -546,9 +551,22 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 
 /* ---------- 記録 ---------- */
 
-function todaysLogs() {
-  const t = todayStr();
-  return workoutLogs.filter(l => l.date === t);
+let recordViewDate = todayStr();
+
+function shiftRecordDate(delta) {
+  const d = new Date(recordViewDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  recordViewDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  renderRecord();
+}
+
+function jumpRecordToday() {
+  recordViewDate = todayStr();
+  renderRecord();
+}
+
+function recordDateLogs() {
+  return workoutLogs.filter(l => l.date === recordViewDate);
 }
 
 function summarizeLogs(logs) {
@@ -580,21 +598,26 @@ function exerciseCardsHtml(logs) {
       '<div class="head"><span class="name">' + escapeHtml(l.exercise) + '</span>' +
       '<span class="badge' + badgeClassFor(l.type) + '">' + l.sets.length + 'セット</span></div>' +
       '<p class="sets">' + setsText + '</p>' +
-      '<span class="del" onclick="deleteLog(\'' + l.id + '\')">削除</span>' +
+      '<div style="display:flex;justify-content:flex-end;gap:16px;margin-top:4px;">' +
+      '<span style="color:var(--text-secondary);font-size:15px;font-weight:700;cursor:pointer;" onclick="openEditExercise(\'' + l.id + '\')">編集</span>' +
+      '<span class="del" style="float:none;" onclick="deleteLog(\'' + l.id + '\')">削除</span>' +
+      '</div>' +
       '</div>';
   }).join('');
 }
 
 function renderRecord() {
-  const logs = todaysLogs();
+  const logs = recordDateLogs();
   const { totalVolume, totalSets, totalCardioMin, totalReps } = summarizeLogs(logs);
+  const isToday = recordViewDate === todayStr();
+  document.getElementById('rec-date-label').textContent = fmtDateLabel(recordViewDate) + (isToday ? ' ・ 今日' : '');
   document.getElementById('rec-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
   const notes = [];
   if (totalCardioMin) notes.push('有酸素' + totalCardioMin + '分');
   if (totalReps) notes.push('自重' + totalReps + '回');
   document.getElementById('rec-sets').textContent = totalSets + (notes.length ? ' (' + notes.join(', ') + ')' : '');
   document.getElementById('rec-list').innerHTML = logs.length === 0
-    ? '<div class="empty">今日の記録はまだありません</div>'
+    ? '<div class="empty">記録がまだありません</div>'
     : exerciseCardsHtml(logs);
 }
 
@@ -620,13 +643,46 @@ function escapeHtml(s) {
 /* ---------- 種目追加モーダル ---------- */
 
 let exCurrentType = 'strength';
+let editingLogId = null;
+let exTargetDate = todayStr();
 
-function openAddExercise() {
-  document.getElementById('ex-title').value = '';
-  const history = document.getElementById('ex-name-history');
-  const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
-  history.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">').join('');
-  setExType('strength');
+function populateExTitleSelect(selectedName) {
+  const sel = document.getElementById('ex-title');
+  let names = machines.map(m => m.name);
+  if (selectedName && !names.includes(selectedName)) names = [selectedName, ...names];
+  if (names.length === 0) {
+    sel.innerHTML = '<option value="">(マシンが登録されていません)</option>';
+    return;
+  }
+  sel.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
+  sel.value = selectedName || names[0];
+}
+
+function openAddExercise(date) {
+  editingLogId = null;
+  exTargetDate = date || todayStr();
+  populateExTitleSelect();
+  document.querySelector('#modal-add-exercise h3').textContent =
+    exTargetDate === todayStr() ? '種目を追加' : '種目を追加（' + fmtDateLabel(exTargetDate) + '）';
+  document.querySelector('#modal-add-exercise button.primary').textContent = '保存';
+  const name = document.getElementById('ex-title').value;
+  setExType(machines.length ? machineType(name) : 'strength');
+  openModal('modal-add-exercise');
+}
+
+function openEditExercise(id) {
+  const log = workoutLogs.find(l => l.id === id);
+  if (!log) return;
+  editingLogId = id;
+  exTargetDate = log.date;
+  populateExTitleSelect(log.exercise);
+  exCurrentType = log.type;
+  document.querySelectorAll('#ex-type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === log.type));
+  const wrap = document.getElementById('ex-sets');
+  wrap.innerHTML = '';
+  log.sets.forEach(s => addSetRow(s));
+  document.querySelector('#modal-add-exercise h3').textContent = '種目を編集';
+  document.querySelector('#modal-add-exercise button.primary').textContent = '更新';
   openModal('modal-add-exercise');
 }
 
@@ -643,25 +699,25 @@ function setExType(type) {
   addSetRow();
 }
 
-function addSetRow() {
+function addSetRow(prefill) {
   const wrap = document.getElementById('ex-sets');
   const idx = wrap.children.length + 1;
   const prevRow = wrap.lastElementChild;
   const row = document.createElement('div');
   row.className = 'set-row';
   if (exCurrentType === 'cardio') {
-    const prevDuration = prevRow ? prevRow.querySelector('.set-duration').value : '';
-    const prevDistance = prevRow ? prevRow.querySelector('.set-distance').value : '';
+    const prevDuration = prefill ? (prefill.duration != null ? prefill.duration : '') : (prevRow ? prevRow.querySelector('.set-duration').value : '');
+    const prevDistance = prefill ? (prefill.distance != null ? prefill.distance : '') : (prevRow ? prevRow.querySelector('.set-distance').value : '');
     row.innerHTML = '<span>セット' + idx + '</span>' +
       '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
       '<input type="number" step="0.1" class="set-distance" placeholder="距離km(任意)" value="' + prevDistance + '">';
   } else if (exCurrentType === 'reps') {
-    const prevReps = prevRow ? prevRow.querySelector('.set-reps-only').value : '';
+    const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps-only').value : '');
     row.innerHTML = '<span>セット' + idx + '</span>' +
       '<input type="number" class="set-reps-only" placeholder="回数" value="' + prevReps + '">';
   } else {
-    const prevWeight = prevRow ? prevRow.querySelector('.set-weight').value : '';
-    const prevReps = prevRow ? prevRow.querySelector('.set-reps').value : '';
+    const prevWeight = prefill ? (prefill.weight != null ? prefill.weight : '') : (prevRow ? prevRow.querySelector('.set-weight').value : '');
+    const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps').value : '');
     row.innerHTML = '<span>セット' + idx + '</span>' +
       '<div class="stepper">' +
       '<button type="button" class="step-btn" onclick="adjustWeight(this,-5)">－</button>' +
@@ -682,7 +738,7 @@ function adjustWeight(btn, delta) {
 
 function saveExercise() {
   const name = document.getElementById('ex-title').value.trim();
-  if (!name) { alert('種目名を入力してください'); return; }
+  if (!name) { alert('種目を選択してください'); return; }
   const rows = document.querySelectorAll('#ex-sets .set-row');
   const sets = [];
   if (exCurrentType === 'cardio') {
@@ -704,10 +760,25 @@ function saveExercise() {
     });
   }
   if (sets.length === 0) { alert('セットを1つ以上入力してください'); return; }
-  workoutLogs.push({ id: uid(), date: todayStr(), exercise: name, type: exCurrentType, sets: sets });
+  if (editingLogId) {
+    const log = workoutLogs.find(l => l.id === editingLogId);
+    if (log) { log.exercise = name; log.type = exCurrentType; log.sets = sets; }
+    editingLogId = null;
+  } else {
+    workoutLogs.push({ id: uid(), date: exTargetDate, exercise: name, type: exCurrentType, sets: sets });
+  }
   saveWorkoutLogs();
   closeModal('modal-add-exercise');
-  renderRecord();
+  const active = document.querySelector('.screen.active');
+  if (active && active.id === 'screen-progress') {
+    renderDayDetail();
+    renderResultsCalendar();
+    renderResultsSummary();
+    renderAssessment();
+    renderBestList();
+  } else {
+    renderRecord();
+  }
 }
 
 /* ---------- トレ結果 ---------- */
