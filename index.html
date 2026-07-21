@@ -457,8 +457,47 @@ function fmtDateLabel(dateStr) {
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function round1(n) { return Math.round(n*10)/10; }
+function formatInt(n) { return Math.round(n).toLocaleString('ja-JP'); }
 
 const BODY_PARTS = ['胸', '背中', '脚', '肩', '腕', '腹', '有酸素', 'その他'];
+const PART_COLORS = {
+  '胸': '#ef6461',
+  '背中': '#4c8bf5',
+  '脚': '#8b5cf6',
+  '肩': '#f2a541',
+  '腕': '#2fb380',
+  '腹': '#8fd14f',
+  '有酸素': '#ec4899',
+  'その他': '#9aa0a6'
+};
+
+function partsDonutSvg(partCounts) {
+  const entries = BODY_PARTS.filter(p => partCounts[p]).map(p => ({ part: p, count: partCounts[p] }));
+  const total = entries.reduce((s, e) => s + e.count, 0);
+  if (total === 0) return '<div class="empty" style="padding:8px 0;">記録なし</div>';
+  const size = 96, r = 40, cx = size / 2, cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = entries.map(e => {
+    const dash = (e.count / total) * circumference;
+    const seg = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + PART_COLORS[e.part] + '" stroke-width="16" ' +
+      'stroke-dasharray="' + dash + ' ' + (circumference - dash) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>';
+    offset += dash;
+    return seg;
+  }).join('');
+  const legend = entries.map(e =>
+    '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--text-secondary);white-space:nowrap;">' +
+    '<span style="width:8px;height:8px;border-radius:2px;background:' + PART_COLORS[e.part] + ';display:inline-block;flex-shrink:0;"></span>' +
+    e.part + ' ' + e.count + '</span>'
+  ).join('');
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;">' +
+    '<svg viewBox="0 0 ' + size + ' ' + size + '" style="width:64px;height:64px;flex-shrink:0;">' +
+    arcs +
+    '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" font-size="17" font-weight="800" fill="var(--text)">' + total + '</text>' +
+    '</svg>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:5px 10px;justify-content:center;">' + legend + '</div>' +
+    '</div>';
+}
 
 const DEFAULT_MACHINES = [
   { name: 'トレッドミル', type: 'cardio', part: '有酸素' },
@@ -611,7 +650,7 @@ function renderRecord() {
   const { totalVolume, totalSets, totalCardioMin, totalReps } = summarizeLogs(logs);
   const isToday = recordViewDate === todayStr();
   document.getElementById('rec-date-label').textContent = fmtDateLabel(recordViewDate) + (isToday ? ' ・ 今日' : '');
-  document.getElementById('rec-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
+  document.getElementById('rec-volume').innerHTML = formatInt(totalVolume) + '<span class="unit">kg</span>';
   const notes = [];
   if (totalCardioMin) notes.push('有酸素' + totalCardioMin + '分');
   if (totalReps) notes.push('自重' + totalReps + '回');
@@ -913,9 +952,8 @@ function renderResultsSummary() {
     if (isStrengthLog(l)) totalVolume += l.sets.reduce((s, x) => s + x.weight * x.reps, 0);
   });
   document.getElementById('res-count').textContent = daysWithLogs + '日';
-  document.getElementById('res-volume').innerHTML = Math.round(totalVolume) + '<span class="unit">kg</span>';
-  const partsHtml = BODY_PARTS.filter(p => partCounts[p]).map(p => p + ' ' + partCounts[p]).join(' / ');
-  document.getElementById('res-parts-sets').textContent = partsHtml || '記録なし';
+  document.getElementById('res-volume').innerHTML = formatInt(totalVolume) + '<span class="unit">kg</span>';
+  document.getElementById('res-parts-sets').innerHTML = partsDonutSvg(partCounts);
 
   const historyThisMonth = planHistory.filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth);
   const avgEl = document.getElementById('res-avg-duration');
@@ -1133,22 +1171,24 @@ function bodyDualChartSvg(logs) {
   }
 
   // 体重は2kg刻みの目盛でグリッド線を引く。体脂肪率は右側に独立した目盛を表示
+  // 上下は必ず体重の範囲上限・下限を表示し、幅が広い場合は間に1kg刻みの目盛も足す
   function weightTicks(lo, hi) {
     const step = 1;
     const start = Math.ceil(lo / step) * step;
     const ticks = [];
     for (let v = start; v <= hi; v += step) ticks.push(v);
-    if (ticks.length === 0) ticks.push(Math.round((lo + hi) / 2 / step) * step);
-    return ticks;
+    return ticks.filter(v => Math.abs(v - hi) > 0.3 && Math.abs(v - lo) > 0.3);
   }
   let grid = '';
   let fLo = 0, fHi = 0;
   if (fats.length > 0) [fLo, fHi] = paddedRange(Math.min(...fats), Math.max(...fats));
-  weightTicks(wLo, wHi).forEach(v => {
-    const y = wy(v);
+  function weightGridLine(v, y) {
     grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
     grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + v + '</text>';
-  });
+  }
+  weightGridLine(round1(wHi), padT);
+  weightTicks(wLo, wHi).forEach(v => weightGridLine(v, wy(v)));
+  weightGridLine(round1(wLo), h - padB);
   if (fats.length > 0) {
     [0, 0.5, 1].forEach(t => {
       const y = padT + plotH * t;
