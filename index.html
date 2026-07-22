@@ -866,8 +866,10 @@ function selectResultDay(dateStr) {
 function renderDayDetail() {
   const logs = workoutLogs.filter(l => l.date === selectedResultDate);
   const label = fmtDateLabel(selectedResultDate);
+  const caloriesHtml = logs.length === 0 ? '' :
+    '<span style="float:right;font-weight:700;color:var(--text-secondary);">🔥 ' + formatInt(estimateCalories(logs, selectedResultDate)) + '<span class="unit">kcal</span></span>';
   document.getElementById('res-day-detail').innerHTML =
-    '<p class="field-label" style="margin-bottom:8px;">' + label + 'の記録</p>' +
+    '<p class="field-label" style="margin-bottom:8px;overflow:hidden;">' + label + 'の記録' + caloriesHtml + '</p>' +
     (logs.length === 0 ? '<div class="empty">この日の記録はありません</div>' : exerciseCardsHtml(logs));
 }
 
