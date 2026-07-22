@@ -243,11 +243,19 @@
         <p class="field-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div class="row">
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
+          <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
+          <div class="stat"><p>消費カロリー</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>部位別セット数</p><div id="res-parts-sets" style="margin-top:6px;font-size:15px;font-weight:700;line-height:1.6;">-</div></div>
-          <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
+          <div class="stat"><p>総セット数</p><p id="res-total-sets">0<span class="unit">セット</span></p></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="stat"><p>総レップ数</p><p id="res-total-reps">0<span class="unit">回</span></p></div>
+          <div class="stat"><p>前月比</p><p id="res-vs-last-month">-</p></div>
         </div>
       </div>
 
@@ -953,16 +961,34 @@ function renderResultsSummary() {
   const thisMonth = todayStr().slice(0, 7);
   const logsThisMonth = workoutLogs.filter(l => monthKey(l.date) === thisMonth);
   const daysWithLogs = new Set(logsThisMonth.map(l => l.date)).size;
-  let totalVolume = 0;
+  let totalVolume = 0, totalSets = 0, totalReps = 0;
   const partCounts = {};
   logsThisMonth.forEach(l => {
     const part = machinePart(l.exercise);
     partCounts[part] = (partCounts[part] || 0) + l.sets.length;
     if (isStrengthLog(l)) totalVolume += l.sets.reduce((s, x) => s + x.weight * x.reps, 0);
+    l.sets.forEach(s => { totalSets++; if (s.reps != null) totalReps += s.reps; });
   });
   document.getElementById('res-count').textContent = daysWithLogs + '日';
   document.getElementById('res-volume').innerHTML = formatInt(totalVolume) + '<span class="unit">kg</span>';
   document.getElementById('res-parts-sets').innerHTML = partsDonutSvg(partCounts);
+  document.getElementById('res-total-sets').innerHTML = formatInt(totalSets) + '<span class="unit">セット</span>';
+  document.getElementById('res-total-reps').innerHTML = formatInt(totalReps) + '<span class="unit">回</span>';
+  document.getElementById('res-calories').innerHTML = formatInt(estimateCalories(logsThisMonth, todayStr())) + '<span class="unit">kcal</span>';
+
+  const lastMonth = shiftMonthKey(thisMonth, -1);
+  const lastMonthVolume = monthlyVolume(lastMonth);
+  const vsEl = document.getElementById('res-vs-last-month');
+  if (lastMonthVolume > 0) {
+    const diffPct = Math.round((totalVolume - lastMonthVolume) / lastMonthVolume * 100);
+    const sign = diffPct > 0 ? '+' : '';
+    const color = diffPct > 0 ? 'var(--accent)' : diffPct < 0 ? 'var(--coral)' : 'var(--text-secondary)';
+    vsEl.innerHTML = '<span style="color:' + color + ';">' + sign + diffPct + '<span class="unit">%</span></span>';
+  } else if (totalVolume > 0) {
+    vsEl.innerHTML = '<span style="font-size:16px;">前月未記録</span>';
+  } else {
+    vsEl.textContent = '-';
+  }
 
   const historyThisMonth = planHistory.filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth);
   const avgEl = document.getElementById('res-avg-duration');
@@ -1006,6 +1032,34 @@ function deleteDurationHistory(id) {
 function monthlyVolume(mk) {
   return workoutLogs.filter(l => monthKey(l.date) === mk && isStrengthLog(l))
     .reduce((sum, l) => sum + l.sets.reduce((s, x) => s + x.weight * x.reps, 0), 0);
+}
+
+function shiftMonthKey(mk, delta) {
+  let [y, m] = mk.split('-').map(Number);
+  m += delta;
+  while (m < 1) { m += 12; y--; }
+  while (m > 12) { m -= 12; y++; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+function latestWeightKg(onOrBeforeDate) {
+  const sorted = [...bodyLogs].filter(b => b.weight).sort((a, b) => a.date.localeCompare(b.date));
+  if (sorted.length === 0) return 65;
+  let candidate = sorted[0];
+  sorted.forEach(b => { if (b.date <= onOrBeforeDate) candidate = b; });
+  return candidate.weight;
+}
+
+const MET = { strength: 5, reps: 4, cardio: 8 };
+function estimateCalories(logs, refDate) {
+  const w = latestWeightKg(refDate);
+  let kcal = 0;
+  logs.forEach(l => l.sets.forEach(s => {
+    if (l.type === 'cardio') kcal += MET.cardio * 3.5 * w / 200 * (s.duration || 0);
+    else if (l.type === 'reps') kcal += MET.reps * 3.5 * w / 200;
+    else kcal += MET.strength * 3.5 * w / 200;
+  }));
+  return Math.round(kcal);
 }
 
 function renderAssessment() {
