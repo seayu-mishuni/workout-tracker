@@ -247,7 +247,7 @@
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>部位別セット数</p><div id="res-parts-sets" style="margin-top:6px;font-size:15px;font-weight:700;line-height:1.6;">-</div></div>
-          <div class="stat"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
+          <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
         </div>
       </div>
 
@@ -432,6 +432,15 @@
       <div id="settings-counts"></div>
     </div>
     <div class="warn-box">データは端末内にのみ保存されます。定期的なエクスポートをおすすめします。</div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-duration-history">
+  <div class="modal-sheet">
+    <span class="close" onclick="closeModal('modal-duration-history')">×</span>
+    <h3>今月のトレ時間</h3>
+    <p style="font-size:14px;color:var(--text-muted);margin:0 0 12px;">記録を削除すると平均時間が再計算されます。テストや間違いで記録された短い記録はここから削除できます。</p>
+    <div class="card" style="padding:0;" id="duration-history-list"></div>
   </div>
 </div>
 
@@ -963,6 +972,35 @@ function renderResultsSummary() {
   } else {
     avgEl.textContent = '-';
   }
+}
+
+function openDurationHistory() {
+  renderDurationHistory();
+  openModal('modal-duration-history');
+}
+function renderDurationHistory() {
+  const thisMonth = todayStr().slice(0, 7);
+  const historyThisMonth = planHistory
+    .filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const listEl = document.getElementById('duration-history-list');
+  if (historyThisMonth.length === 0) {
+    listEl.innerHTML = '<p style="padding:12px;color:var(--text-muted);">今月の記録はまだありません。</p>';
+    return;
+  }
+  listEl.innerHTML = historyThisMonth.map(h =>
+    '<div class="list-item" style="padding:12px;">' +
+      '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分</p></div>' +
+      '<span style="color:var(--coral);cursor:pointer;" onclick="deleteDurationHistory(\'' + h.id + '\')">削除</span>' +
+    '</div>'
+  ).join('');
+}
+function deleteDurationHistory(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  planHistory = planHistory.filter(h => h.id !== id);
+  savePlanHistory();
+  renderDurationHistory();
+  renderResultsSummary();
 }
 
 function monthlyVolume(mk) {
