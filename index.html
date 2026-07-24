@@ -1021,11 +1021,13 @@ function renderResultsSummary() {
     const lastLogs = workoutLogs.filter(l => l.date === last.date);
     const lastKcal = estimateCalories(lastLogs, last.date);
     const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
+    const lastHasCardio = lastLogs.some(l => l.type === 'cardio');
     const chips = [
       '<span class="mini-chip c-blue">⏱ ' + last.durationMin + '分</span>',
       last.planName ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(last.planName) + '</span>' : '',
       '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目</span>',
-      '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>'
+      '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>',
+      lastHasCardio ? '<span class="mini-chip c-blue">🏃 有酸素</span>' : ''
     ].filter(Boolean).join('');
     lastEl.innerHTML = '<p style="margin:0 0 8px;font-size:18px;font-weight:800;">' + fmtDateLabel(last.date) + '</p>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>';
