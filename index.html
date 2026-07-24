@@ -207,6 +207,16 @@
   .assess-row:last-child { border-bottom: none; }
   .assess-row .label { font-size: 16px; color: var(--text-secondary); font-weight: 600; }
   .assess-row .value { font-size: 18px; font-weight: 800; }
+  .mini-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 14px; font-weight: 700; padding: 5px 10px; border-radius: 20px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .mini-chip.c-blue { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
+  .mini-chip.c-purple { background: var(--purple-bg); color: var(--purple-text); border-color: transparent; }
+  .mini-chip.c-green { background: var(--green-bg); color: var(--green-text); border-color: transparent; }
+  .mini-chip.c-amber { background: var(--amber-bg); color: var(--amber); border-color: transparent; }
 </style>
 </head>
 <body>
@@ -242,7 +252,7 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div class="row">
-          <div class="stat" style="flex:1;"><p>前回のトレ</p><p id="res-last-training" style="font-size:17px;">-</p></div>
+          <div class="stat" style="flex:1;"><p>前回のトレ</p><div id="res-last-training" style="margin-top:6px;">-</div></div>
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
@@ -1005,13 +1015,20 @@ function renderResultsSummary() {
   }
 
   const lastEl = document.getElementById('res-last-training');
-  const completedHistory = planHistory.filter(h => h.status === 'completed').sort((a, b) => b.date.localeCompare(a.date));
+  const completedHistory = planHistory.filter(h => h.status === 'completed');
   if (completedHistory.length > 0) {
-    const last = completedHistory[0];
+    const last = completedHistory[completedHistory.length - 1];
     const lastLogs = workoutLogs.filter(l => l.date === last.date);
     const lastKcal = estimateCalories(lastLogs, last.date);
     const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
-    lastEl.textContent = fmtDateLabel(last.date) + ' ・ ' + last.durationMin + '分' + (last.location ? ' ・ ' + last.location : '') + ' ・ ' + lastExCount + '種目 ・ ' + formatInt(lastKcal) + 'kcal';
+    const chips = [
+      '<span class="mini-chip c-blue">⏱ ' + last.durationMin + '分</span>',
+      last.location ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(last.location) + '</span>' : '',
+      '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目</span>',
+      '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>'
+    ].filter(Boolean).join('');
+    lastEl.innerHTML = '<p style="margin:0 0 8px;font-size:18px;font-weight:800;">' + fmtDateLabel(last.date) + '</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>';
   } else {
     lastEl.textContent = '-';
   }
