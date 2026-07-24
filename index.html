@@ -242,6 +242,9 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div class="row">
+          <div class="stat" style="flex:1;"><p>前回のトレ</p><p id="res-last-training" style="font-size:17px;">-</p></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
           <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
         </div>
@@ -1000,6 +1003,18 @@ function renderResultsSummary() {
   } else {
     avgEl.textContent = '-';
   }
+
+  const lastEl = document.getElementById('res-last-training');
+  const completedHistory = planHistory.filter(h => h.status === 'completed').sort((a, b) => b.date.localeCompare(a.date));
+  if (completedHistory.length > 0) {
+    const last = completedHistory[0];
+    const lastLogs = workoutLogs.filter(l => l.date === last.date);
+    const lastKcal = estimateCalories(lastLogs, last.date);
+    const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
+    lastEl.textContent = fmtDateLabel(last.date) + ' ・ ' + last.durationMin + '分' + (last.location ? ' ・ ' + last.location : '') + ' ・ ' + lastExCount + '種目 ・ ' + formatInt(lastKcal) + 'kcal';
+  } else {
+    lastEl.textContent = '-';
+  }
 }
 
 function openDurationHistory() {
@@ -1018,7 +1033,7 @@ function renderDurationHistory() {
   }
   listEl.innerHTML = historyThisMonth.map(h =>
     '<div class="list-item" style="padding:12px;">' +
-      '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分</p></div>' +
+      '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分' + (h.location ? '・' + escapeHtml(h.location) : '') + '</p></div>' +
       '<span style="color:var(--coral);cursor:pointer;" onclick="deleteDurationHistory(\'' + h.id + '\')">削除</span>' +
     '</div>'
   ).join('');
@@ -1648,7 +1663,9 @@ function renderPlanRun() {
   }).join('');
 
   if (activeRun.currentIndex === -1) {
-    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;">プラン完了 🎉</p>' +
+    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;margin-bottom:14px;">プラン完了 🎉</p>' +
+      '<label class="field-label">場所(任意)</label>' +
+      '<input type="text" id="run-location-input" placeholder="例: ジムA" autocomplete="off" autocorrect="off" spellcheck="false" value="' + escapeHtml(activeRun.location || '') + '" style="margin-bottom:14px;">' +
       '<button class="primary" onclick="completePlanRun()">終了する</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
@@ -1773,7 +1790,8 @@ function chooseNextExercise(name) {
 
 function completePlanRun() {
   const durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
-  planHistory.push({ id: uid(), planName: activeRun.planName, date: todayStr(), durationMin, status: 'completed' });
+  const location = (document.getElementById('run-location-input')?.value || '').trim();
+  planHistory.push({ id: uid(), planName: activeRun.planName, date: todayStr(), durationMin, location: location || null, status: 'completed' });
   savePlanHistory();
   if (activeRun.scheduleDate) {
     const sched = scheduledPlans.find(s => s.date === activeRun.scheduleDate);
