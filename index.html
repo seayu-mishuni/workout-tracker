@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ワークアウト">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 <title>ワークアウト管理</title>
@@ -250,9 +253,9 @@
 
     <section id="screen-progress" class="screen active">
       <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">今月のサマリー</p>
+        <p class="field-label" id="res-summary-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div class="row">
-          <div class="stat" style="flex:1;"><p>前回のトレ</p><div id="res-last-training" style="margin-top:6px;">-</div></div>
+          <div class="stat" style="flex:1;"><p id="res-last-label">前回のトレ</p><div id="res-last-training" style="margin-top:6px;">-</div></div>
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
@@ -283,13 +286,24 @@
       </div>
 
       <div class="card">
-        <p class="field-label" style="margin-bottom:4px;">今月の総合評価</p>
+        <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
         <div id="res-assessment"></div>
       </div>
 
       <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">自己ベスト更新</p>
+        <p class="field-label" id="res-best-label" style="margin-bottom:8px;">自己ベスト更新</p>
         <div id="res-best-list"></div>
+      </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">種目別の推移</p>
+        <select id="ex-trend-select" style="margin-bottom:10px;" onchange="onExTrendChange()"></select>
+        <div class="seg">
+          <button class="active" data-days="90" onclick="setExTrendRange(90,this)">3ヶ月</button>
+          <button data-days="365" onclick="setExTrendRange(365,this)">1年</button>
+          <button data-days="0" onclick="setExTrendRange(0,this)">全期間</button>
+        </div>
+        <div id="ex-trend-chart"></div>
       </div>
 
       <div class="card">
@@ -310,12 +324,14 @@
         </div>
       </div>
       <div class="card">
-        <label class="field-label">今日の記録を入力</label>
+        <label class="field-label">記録を入力</label>
+        <input type="date" id="body-date-input" style="margin-bottom:8px;">
         <div class="row" style="margin-bottom:8px;">
-          <input type="number" step="0.1" id="body-weight-input" placeholder="体重 kg">
-          <input type="number" step="0.1" id="body-fat-input" placeholder="体脂肪率 %">
+          <input type="number" step="0.1" min="0" id="body-weight-input" placeholder="体重 kg">
+          <input type="number" step="0.1" min="0" id="body-fat-input" placeholder="体脂肪率 %">
         </div>
         <button class="primary" onclick="saveBodyLog()">保存</button>
+        <p id="body-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
       </div>
       <div class="card">
         <div class="seg">
@@ -325,9 +341,13 @@
         </div>
         <div id="body-chart"></div>
       </div>
-      <div class="row">
+      <div class="row" style="margin-bottom:16px;">
         <div class="stat"><p>月初から</p><p id="body-month-diff">-</p></div>
         <div class="stat"><p>除脂肪体重</p><p id="body-lean">-<span class="unit">kg</span></p></div>
+      </div>
+      <div class="card">
+        <p class="field-label" style="margin-bottom:4px;">記録の履歴</p>
+        <div id="body-log-list"></div>
       </div>
     </section>
 
@@ -346,16 +366,16 @@
 
   <nav>
     <div class="inner">
-      <div class="tab active" data-screen="progress" onclick="showScreen('progress')">
+      <div class="tab active" role="button" tabindex="0" data-screen="progress" onclick="showScreen('progress')">
         <span class="ic">📈</span><p>トレ</p>
       </div>
-      <div class="tab" data-screen="record" onclick="showScreen('record')">
+      <div class="tab" role="button" tabindex="0" data-screen="record" onclick="showScreen('record')">
         <span class="ic">🏋</span><p>記録</p>
       </div>
-      <div class="tab" data-screen="body" onclick="showScreen('body')">
+      <div class="tab" role="button" tabindex="0" data-screen="body" onclick="showScreen('body')">
         <span class="ic">⚖</span><p>からだ</p>
       </div>
-      <div class="tab" data-screen="plan" onclick="showScreen('plan')">
+      <div class="tab" role="button" tabindex="0" data-screen="plan" onclick="showScreen('plan')">
         <span class="ic">📋</span><p>プラン</p>
       </div>
     </div>
@@ -432,6 +452,20 @@
       <select id="machine-new-part" style="margin-bottom:8px;"></select>
       <button class="secondary" onclick="addMachine()">＋ マシンを追加</button>
     </div>
+    <p class="field-label">インターバル（休憩）タイマー</p>
+    <div class="card">
+      <label class="field-label">セット間の休憩時間</label>
+      <select id="rest-seconds-select" onchange="saveRestSeconds()">
+        <option value="0">使わない</option>
+        <option value="30">30秒</option>
+        <option value="45">45秒</option>
+        <option value="60">60秒</option>
+        <option value="90">90秒</option>
+        <option value="120">2分</option>
+        <option value="180">3分</option>
+      </select>
+      <p style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">プラン実行中に「次のセット」を押すと自動でカウントダウンします。</p>
+    </div>
     <p class="field-label">データ管理</p>
     <div class="card" style="padding:0;">
       <div class="list-item" style="padding:12px;cursor:pointer;" onclick="exportData()">
@@ -459,7 +493,7 @@
 <div class="modal-backdrop" id="modal-duration-history">
   <div class="modal-sheet">
     <span class="close" onclick="closeModal('modal-duration-history')">×</span>
-    <h3>今月のトレ時間</h3>
+    <h3 id="duration-history-title">今月のトレ時間</h3>
     <p style="font-size:14px;color:var(--text-muted);margin:0 0 12px;">記録を削除すると平均時間が再計算されます。テストや間違いで記録された短い記録はここから削除できます。</p>
     <div class="card" style="padding:0;" id="duration-history-list"></div>
   </div>
@@ -476,9 +510,15 @@ const store = {
   set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 };
 
-function todayStr() {
-  const d = new Date();
+function fmtYmd(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayStr() { return fmtYmd(new Date()); }
+// 集計の起点はローカル時刻基準で求める（toISOString はUTCなのでJSTでは1日ずれる）
+function daysAgoStr(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return fmtYmd(d);
 }
 function fmtDateLabel(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -560,6 +600,7 @@ if (!plans) {
 }
 let activeRun = store.get('activeRun', null);
 if (activeRun && !activeRun.doneIndices) activeRun.doneIndices = [];
+if (activeRun && !activeRun.date) activeRun.date = todayStr();
 let scheduledPlans = store.get('scheduledPlans', []);
 let planHistory = store.get('planHistory', []);
 let machines = store.get('machines', null);
@@ -625,7 +666,7 @@ let recordViewDate = todayStr();
 function shiftRecordDate(delta) {
   const d = new Date(recordViewDate + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  recordViewDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  recordViewDate = fmtYmd(d);
   renderRecord();
 }
 
@@ -691,6 +732,9 @@ function renderRecord() {
 }
 
 function deleteLog(id) {
+  const log = workoutLogs.find(l => l.id === id);
+  if (!log) return;
+  if (!confirm('「' + log.exercise + '」の記録（' + log.sets.length + 'セット）を削除しますか？')) return;
   workoutLogs = workoutLogs.filter(l => l.id !== id);
   saveWorkoutLogs();
   const active = document.querySelector('.screen.active');
@@ -700,6 +744,7 @@ function deleteLog(id) {
     renderResultsSummary();
     renderAssessment();
     renderBestList();
+    renderExTrend();
   } else {
     renderRecord();
   }
@@ -845,6 +890,7 @@ function saveExercise() {
     renderResultsSummary();
     renderAssessment();
     renderBestList();
+    renderExTrend();
   } else {
     renderRecord();
   }
@@ -853,6 +899,20 @@ function saveExercise() {
 /* ---------- トレ結果 ---------- */
 
 function monthKey(dateStr) { return dateStr.slice(0, 7); }
+function currentMonthKey() { return todayStr().slice(0, 7); }
+function daysInMonth(mk) {
+  const [y, m] = mk.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+// 集計の基準日。過去月を見ているときは今日ではなくその月末を基準にする
+function monthRefDate(mk) {
+  return mk === currentMonthKey() ? todayStr() : mk + '-' + String(daysInMonth(mk)).padStart(2, '0');
+}
+function monthLabel(mk) {
+  const [y, m] = mk.split('-').map(Number);
+  if (mk === currentMonthKey()) return '今月';
+  return (y === new Date().getFullYear() ? '' : y + '年') + m + '月';
+}
 
 function allExerciseNames() {
   return [...new Set(workoutLogs.map(l => l.exercise))].sort();
@@ -866,8 +926,16 @@ let selectedResultDate = null;
 function shiftCalendarMonth(delta) {
   const [y, m] = calendarViewMonth.split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
-  calendarViewMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  calendarViewMonth = fmtYmd(d).slice(0, 7);
+  // 表示していない月の日を選んだままにしない
+  if (monthKey(selectedResultDate) !== calendarViewMonth) {
+    selectedResultDate = calendarViewMonth === currentMonthKey() ? todayStr() : calendarViewMonth + '-01';
+  }
   renderResultsCalendar();
+  renderDayDetail();
+  renderResultsSummary();
+  renderAssessment();
+  renderBestList();
 }
 
 function selectResultDay(dateStr) {
@@ -969,11 +1037,17 @@ function renderTrainingResults() {
   renderResultsSummary();
   renderAssessment();
   renderBestList();
+  renderExTrend();
   renderResultsBodyChart();
 }
 
 function renderResultsSummary() {
-  const thisMonth = todayStr().slice(0, 7);
+  const thisMonth = calendarViewMonth || currentMonthKey();
+  const isCurrentMonth = thisMonth === currentMonthKey();
+  const refDate = monthRefDate(thisMonth);
+  const label = monthLabel(thisMonth);
+  document.getElementById('res-summary-label').textContent = label + 'のサマリー';
+  document.getElementById('res-last-label').textContent = isCurrentMonth ? '前回のトレ' : label + '最後のトレ';
   const logsThisMonth = workoutLogs.filter(l => monthKey(l.date) === thisMonth);
   const daysWithLogs = new Set(logsThisMonth.map(l => l.date)).size;
   let totalVolume = 0, totalSets = 0, totalReps = 0;
@@ -989,7 +1063,7 @@ function renderResultsSummary() {
   document.getElementById('res-parts-sets').innerHTML = partsDonutSvg(partCounts);
   document.getElementById('res-total-sets').innerHTML = formatInt(totalSets) + '<span class="unit">セット</span>';
   document.getElementById('res-total-reps').innerHTML = formatInt(totalReps) + '<span class="unit">回</span>';
-  document.getElementById('res-calories').innerHTML = formatInt(estimateCalories(logsThisMonth, todayStr())) + '<span class="unit">kcal</span>';
+  document.getElementById('res-calories').innerHTML = formatInt(estimateCalories(logsThisMonth, refDate)) + '<span class="unit">kcal</span>';
 
   const lastMonth = shiftMonthKey(thisMonth, -1);
   const lastMonthVolume = monthlyVolume(lastMonth);
@@ -1014,22 +1088,25 @@ function renderResultsSummary() {
     avgEl.textContent = '-';
   }
 
+  // プラン実行の履歴ではなく記録そのものを基準にする（手動で記録した日も表示される）
   const lastEl = document.getElementById('res-last-training');
-  const completedHistory = planHistory.filter(h => h.status === 'completed');
-  if (completedHistory.length > 0) {
-    const last = completedHistory[completedHistory.length - 1];
-    const lastLogs = workoutLogs.filter(l => l.date === last.date);
-    const lastKcal = estimateCalories(lastLogs, last.date);
+  const datesWithLogs = [...new Set(logsThisMonth.map(l => l.date))].sort();
+  const lastDate = datesWithLogs[datesWithLogs.length - 1];
+  if (lastDate) {
+    const lastLogs = workoutLogs.filter(l => l.date === lastDate);
+    const lastRun = planHistory.filter(h => h.status === 'completed' && h.date === lastDate).pop();
+    const lastKcal = estimateCalories(lastLogs, lastDate);
     const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
+    const lastSetCount = lastLogs.reduce((s, l) => s + l.sets.length, 0);
     const lastHasCardio = lastLogs.some(l => l.type === 'cardio');
     const chips = [
-      '<span class="mini-chip c-blue">⏱ ' + last.durationMin + '分</span>',
-      last.planName ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(last.planName) + '</span>' : '',
-      '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目</span>',
+      lastRun ? '<span class="mini-chip c-blue">⏱ ' + lastRun.durationMin + '分</span>' : '',
+      lastRun && lastRun.planName ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(lastRun.planName) + '</span>' : '',
+      '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目 / ' + lastSetCount + 'セット</span>',
       '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>',
       lastHasCardio ? '<span class="mini-chip c-blue">🏃 有酸素</span>' : ''
     ].filter(Boolean).join('');
-    lastEl.innerHTML = '<p style="margin:0 0 8px;font-size:18px;font-weight:800;">' + fmtDateLabel(last.date) + '</p>' +
+    lastEl.innerHTML = '<p style="margin:0 0 8px;font-size:18px;font-weight:800;">' + fmtDateLabel(lastDate) + '</p>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>';
   } else {
     lastEl.textContent = '-';
@@ -1041,13 +1118,14 @@ function openDurationHistory() {
   openModal('modal-duration-history');
 }
 function renderDurationHistory() {
-  const thisMonth = todayStr().slice(0, 7);
+  const thisMonth = calendarViewMonth || currentMonthKey();
+  document.getElementById('duration-history-title').textContent = monthLabel(thisMonth) + 'のトレ時間';
   const historyThisMonth = planHistory
     .filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth)
     .sort((a, b) => b.date.localeCompare(a.date));
   const listEl = document.getElementById('duration-history-list');
   if (historyThisMonth.length === 0) {
-    listEl.innerHTML = '<p style="padding:12px;color:var(--text-muted);">今月の記録はまだありません。</p>';
+    listEl.innerHTML = '<p style="padding:12px;color:var(--text-muted);">この月の記録はまだありません。</p>';
     return;
   }
   listEl.innerHTML = historyThisMonth.map(h =>
@@ -1099,15 +1177,15 @@ function estimateCalories(logs, refDate) {
 }
 
 function renderAssessment() {
-  const now = new Date();
-  const thisMonth = todayStr().slice(0, 7);
-  const daysElapsed = now.getDate();
+  const thisMonth = calendarViewMonth || currentMonthKey();
+  document.getElementById('res-assessment-label').textContent = monthLabel(thisMonth) + 'の総合評価';
+  // 当月は経過日数、過去月はその月の日数で割る
+  const daysElapsed = thisMonth === currentMonthKey() ? new Date().getDate() : daysInMonth(thisMonth);
   const daysWithLogsThisMonth = new Set(workoutLogs.filter(l => monthKey(l.date) === thisMonth).map(l => l.date)).size;
   const continuityPct = Math.round((daysWithLogsThisMonth / daysElapsed) * 100);
   const continuityLabel = continuityPct >= 60 ? '良好' : continuityPct >= 30 ? '普通' : '要改善';
 
-  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonth = lastMonthDate.getFullYear() + '-' + String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+  const lastMonth = shiftMonthKey(thisMonth, -1);
   const curVol = monthlyVolume(thisMonth);
   const prevVol = monthlyVolume(lastMonth);
   let strengthLabel;
@@ -1119,8 +1197,7 @@ function renderAssessment() {
   }
 
   const sortedBody = [...bodyLogs].sort((a, b) => a.date.localeCompare(b.date));
-  const monthStart = thisMonth + '-01';
-  const bodyThisMonth = sortedBody.filter(b => b.date >= monthStart);
+  const bodyThisMonth = sortedBody.filter(b => monthKey(b.date) === thisMonth);
   let compLabel = 'データ不足';
   if (bodyThisMonth.length >= 2) {
     const first = bodyThisMonth[0], last = bodyThisMonth[bodyThisMonth.length - 1];
@@ -1140,10 +1217,12 @@ function renderAssessment() {
 }
 
 function computeBests() {
-  const thisMonth = todayStr().slice(0, 7);
+  const thisMonth = calendarViewMonth || currentMonthKey();
   const results = [];
+  // その月末時点での自己ベストを見るため、それ以降の記録は除外する
+  const cutoff = monthRefDate(thisMonth);
   allExerciseNames().forEach(name => {
-    const logs = workoutLogs.filter(l => l.exercise === name).sort((a, b) => a.date.localeCompare(b.date));
+    const logs = workoutLogs.filter(l => l.exercise === name && l.date <= cutoff).sort((a, b) => a.date.localeCompare(b.date));
     if (logs.length === 0) return;
     let bestVal = -Infinity, bestDate = null, unit = '';
     logs.forEach(l => {
@@ -1162,19 +1241,152 @@ function computeBests() {
 
 function renderBestList() {
   const bests = computeBests();
+  const label = monthLabel(calendarViewMonth || currentMonthKey());
+  document.getElementById('res-best-label').textContent = label + 'の自己ベスト更新';
   const el = document.getElementById('res-best-list');
   el.innerHTML = bests.length === 0
-    ? '<div class="empty">今月の自己ベスト更新はまだありません</div>'
+    ? '<div class="empty">' + label + 'の自己ベスト更新はまだありません</div>'
     : bests.map(b =>
         '<div class="list-item"><span style="color:var(--accent);font-size:20px;">🏆</span><div class="lt"><p>' + escapeHtml(b.name) + '</p><p>' + b.value + b.unit + ' (' + fmtDateLabel(b.date) + ')</p></div></div>'
       ).join('');
 }
 
+/* ---------- 種目別の推移 ---------- */
+
+let exTrendName = null;
+let exTrendDays = 90;
+let trendChartCounter = 0;
+
+function setExTrendRange(days, btn) {
+  exTrendDays = days;
+  document.querySelectorAll('#screen-progress .seg button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderExTrend();
+}
+
+function onExTrendChange() {
+  exTrendName = document.getElementById('ex-trend-select').value;
+  renderExTrend();
+}
+
+// 1日に同じ種目が複数記録されていても1点にまとめる。指標は種別ごとに固定
+function exTrendSeries(name, days) {
+  const cutoff = days > 0 ? daysAgoStr(days) : '';
+  const logs = workoutLogs.filter(l => l.exercise === name && l.date >= cutoff)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (logs.length === 0) return null;
+  const type = logs[logs.length - 1].type || 'strength';
+  const byDate = new Map();
+  logs.forEach(l => {
+    let val;
+    if (type === 'cardio') val = l.sets.reduce((s, x) => s + (x.duration || 0), 0);
+    else if (type === 'reps') val = Math.max(...l.sets.map(s => s.reps || 0));
+    else val = Math.max(...l.sets.map(s => s.weight || 0));
+    const cur = byDate.get(l.date);
+    if (cur == null) byDate.set(l.date, val);
+    else byDate.set(l.date, type === 'cardio' ? cur + val : Math.max(cur, val));
+  });
+  return {
+    points: [...byDate.entries()].map(([date, value]) => ({ date, value: round1(value) })),
+    unit: type === 'cardio' ? '分' : type === 'reps' ? '回' : 'kg',
+    metric: type === 'cardio' ? '合計時間' : type === 'reps' ? '最大回数' : '最大重量'
+  };
+}
+
+// 1, 2, 2.5, 5, 10 系列のキリのよい刻み幅を返す
+// integerOnly（回・分）のときは 2.5 刻みを使わず、最小1にそろえる
+function niceStep(x, integerOnly) {
+  const exp = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / exp;
+  const mult = integerOnly
+    ? (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10)
+    : (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10);
+  const step = mult * exp;
+  return integerOnly ? Math.max(1, Math.round(step)) : step;
+}
+
+function trendChartSvg(series) {
+  const { points, unit, metric } = series;
+  trendChartCounter++;
+  const gradId = 'trendGrad' + trendChartCounter;
+  const w = 360, h = 200, padL = 46, padR = 18, padT = 22, padB = 34;
+  const plotH = h - padT - padB;
+  const values = points.map(p => p.value);
+  const minV = Math.min(...values), maxV = Math.max(...values);
+  // 重量・回数はキリのよい数字なので、目盛もその刻みに合わせる
+  const tickStep = niceStep(Math.max((maxV - minV) / 2, maxV * 0.05, 0.1), unit === '回' || unit === '分');
+  let lo = Math.max(0, Math.floor(minV / tickStep) * tickStep);
+  let hi = Math.ceil(maxV / tickStep) * tickStep;
+  // 線が枠に張り付かないよう、上下端に重なるときは1目盛ぶん広げる
+  if (hi <= maxV) hi += tickStep;
+  if (lo >= minV && lo > 0) lo = Math.max(0, lo - tickStep);
+  if (hi === lo) hi = lo + tickStep;
+  const xStep = points.length > 1 ? (w - padL - padR) / (points.length - 1) : 0;
+  const y = v => padT + plotH * (1 - (v - lo) / (hi - lo));
+  const coords = points.map((p, i) => ({ x: padL + xStep * i, y: y(p.value) }));
+
+  let grid = '';
+  for (let v = lo, guard = 0; v <= hi + tickStep / 100 && guard < 12; v += tickStep, guard++) {
+    const yy = y(v);
+    grid += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (w - padR) + '" y2="' + yy + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>' +
+      '<text x="' + (padL - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + round1(v) + '</text>';
+  }
+  const mdLabel = d => parseInt(d.slice(5, 7), 10) + '/' + parseInt(d.slice(8, 10), 10);
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(points[0].date) + '</text>';
+  if (points.length > 1) {
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(points[points.length - 1].date) + '</text>';
+  }
+
+  const linePath = smoothPath(coords);
+  const last = coords[coords.length - 1];
+  const areaPath = linePath + ' L' + last.x + ',' + (h - padB) + ' L' + coords[0].x + ',' + (h - padB) + ' Z';
+  const dots = points.length <= 20
+    ? coords.slice(0, -1).map(c => '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5"/>').join('')
+    : '';
+  const best = Math.max(...values);
+  const latest = points[points.length - 1].value;
+
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
+    '<span class="mini-chip c-green">' + metric + ' ' + latest + unit + '</span>' +
+    '<span class="mini-chip c-amber">🏆 ベスト ' + best + unit + '</span>' +
+    '<span class="mini-chip">' + points.length + '日分</span>' +
+    '</div>' +
+    '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
+    '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"/>' +
+    '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
+    grid +
+    '<path d="' + areaPath + '" fill="url(#' + gradId + ')" stroke="none"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    dots +
+    '<circle cx="' + last.x + '" cy="' + last.y + '" r="6" fill="var(--accent)" fill-opacity="0.18"/>' +
+    '<circle cx="' + last.x + '" cy="' + last.y + '" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="2"/>' +
+    '</svg>';
+}
+
+function renderExTrend() {
+  const sel = document.getElementById('ex-trend-select');
+  const chart = document.getElementById('ex-trend-chart');
+  const names = allExerciseNames();
+  if (names.length === 0) {
+    sel.innerHTML = '<option value="">(記録がありません)</option>';
+    chart.innerHTML = '<div class="empty">記録がまだありません</div>';
+    return;
+  }
+  if (!exTrendName || !names.includes(exTrendName)) {
+    const recent = [...workoutLogs].sort((a, b) => a.date.localeCompare(b.date)).pop();
+    exTrendName = recent ? recent.exercise : names[0];
+  }
+  sel.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
+  sel.value = exTrendName;
+  const series = exTrendSeries(exTrendName, exTrendDays);
+  chart.innerHTML = series ? trendChartSvg(series) : '<div class="empty">この期間の記録がありません</div>';
+}
+
 function renderResultsBodyChart() {
   const sorted = [...bodyLogs].sort((a, b) => a.date.localeCompare(b.date));
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 90);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const cutoffStr = daysAgoStr(90);
   const inRange = sorted.filter(b => b.date >= cutoffStr);
   document.getElementById('res-body-chart').innerHTML = bodyDualChartSvg(inRange);
 }
@@ -1193,7 +1405,8 @@ function saveBodyLog() {
   const weight = parseFloat(document.getElementById('body-weight-input').value);
   const fat = parseFloat(document.getElementById('body-fat-input').value);
   if (isNaN(weight)) { alert('体重を入力してください'); return; }
-  const t = todayStr();
+  const dateInput = document.getElementById('body-date-input');
+  const t = dateInput.value || todayStr();
   const existing = bodyLogs.find(b => b.date === t);
   if (existing) {
     existing.weight = weight;
@@ -1204,10 +1417,50 @@ function saveBodyLog() {
   saveBodyLogs();
   document.getElementById('body-weight-input').value = '';
   document.getElementById('body-fat-input').value = '';
+  dateInput.value = todayStr();
+  document.getElementById('body-input-note').textContent = '同じ日付の記録があれば上書きされます。';
   renderBody();
 }
 
+// 過去の記録を入力欄に読み込んで修正できるようにする
+function editBodyLog(date) {
+  const log = bodyLogs.find(b => b.date === date);
+  if (!log) return;
+  document.getElementById('body-date-input').value = log.date;
+  document.getElementById('body-weight-input').value = log.weight;
+  document.getElementById('body-fat-input').value = log.fat != null ? log.fat : '';
+  document.getElementById('body-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
+  document.getElementById('body-date-input').scrollIntoView({ block: 'center' });
+}
+
+function deleteBodyLog(date) {
+  if (!confirm(fmtDateLabel(date) + 'の記録を削除しますか？')) return;
+  bodyLogs = bodyLogs.filter(b => b.date !== date);
+  saveBodyLogs();
+  renderBody();
+}
+
+function renderBodyLogList() {
+  const el = document.getElementById('body-log-list');
+  const sorted = [...bodyLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(b =>
+    '<div class="list-item">' +
+    '<div class="lt"><p>' + fmtDateLabel(b.date) + '</p>' +
+    '<p>' + b.weight + 'kg' + (b.fat != null ? ' ・ ' + b.fat + '%' : '') + '</p></div>' +
+    '<span style="color:var(--text-secondary);font-size:15px;font-weight:700;cursor:pointer;" onclick="editBodyLog(\'' + b.date + '\')">編集</span>' +
+    '<span style="color:var(--coral);font-size:15px;font-weight:700;cursor:pointer;" onclick="deleteBodyLog(\'' + b.date + '\')">削除</span>' +
+    '</div>'
+  ).join('');
+}
+
 function renderBody() {
+  const dateInput = document.getElementById('body-date-input');
+  if (!dateInput.value) dateInput.value = todayStr();
+  renderBodyLogList();
   const sorted = [...bodyLogs].sort((a,b) => a.date.localeCompare(b.date));
   if (sorted.length === 0) {
     document.getElementById('body-weight-latest').innerHTML = '-<span class="unit">kg</span>';
@@ -1233,9 +1486,7 @@ function renderBody() {
   diffText(latest.weight, prev ? prev.weight : null, document.getElementById('body-weight-diff'));
   diffText(latest.fat, prev ? prev.fat : null, document.getElementById('body-fat-diff'));
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - bodyRangeDays);
-  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const cutoffStr = daysAgoStr(bodyRangeDays);
   const inRange = sorted.filter(b => b.date >= cutoffStr);
   document.getElementById('body-chart').innerHTML = bodyDualChartSvg(inRange);
 
@@ -1499,6 +1750,9 @@ function savePlan() {
 }
 
 function deletePlan(id) {
+  const plan = plans.find(p => p.id === id);
+  if (!plan) return;
+  if (!confirm('テンプレート「' + plan.name + '」を削除しますか？')) return;
   plans = plans.filter(p => p.id !== id);
   savePlans();
   renderPlanScreen();
@@ -1577,6 +1831,7 @@ function saveSchedule() {
 }
 
 function removeSchedule(date) {
+  if (!confirm(fmtDateLabel(date) + 'の予定を削除しますか？')) return;
   scheduledPlans = scheduledPlans.filter(s => s.date !== date);
   saveScheduledPlans();
   renderScheduleList();
@@ -1655,7 +1910,8 @@ function startPlan(id, selectedIndexes, scheduleDate) {
       }
     }
   });
-  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now(), scheduleDate: scheduleDate || null };
+  // 開始日を保持しておく。日付を跨いで再開しても記録先が翌日にずれないようにする
+  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now(), date: scheduleDate || todayStr(), scheduleDate: scheduleDate || null };
   saveActiveRun();
   renderPlanScreen();
 }
@@ -1697,12 +1953,17 @@ function renderPlanRun() {
       counts[r.item.name] = (counts[r.item.name] || 0) + 1;
     });
     view.innerHTML =
+      '<div id="rest-slot"></div>' +
       '<div class="card">' +
       '<p class="field-label" style="margin-bottom:10px;">次はどの種目にしますか？</p>' +
-      order.map(n => '<button class="secondary" style="margin-bottom:8px;" onclick="chooseNextExercise(\'' + n.replace(/'/g, "\\'") + '\')">' + escapeHtml(n) + ' (残り' + counts[n] + 'セット)</button>').join('') +
+      order.map(n => {
+        const first = remaining.find(r => r.item.name === n);
+        return '<button class="secondary" style="margin-bottom:8px;" onclick="chooseNextExercise(' + first.i + ')">' + escapeHtml(n) + ' (残り' + counts[n] + 'セット)</button>';
+      }).join('') +
       '</div>' +
       '<div class="card">' + queueListHtml + '</div>' +
       '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
+    renderRestBar();
     return;
   }
 
@@ -1732,9 +1993,13 @@ function renderPlanRun() {
       '</div>';
   }
 
+  const elapsedMin = Math.round((Date.now() - activeRun.startedAt) / 60000);
+
   view.innerHTML =
+    '<div id="rest-slot"></div>' +
     '<div class="card" style="border:2px solid var(--accent);">' +
-    '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) + '</p>' +
+    '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) +
+    ' ・ 経過 ' + elapsedMin + '分</p>' +
     '<p style="margin:2px 0 0;font-size:21px;font-weight:800;">▶ ' + escapeHtml(cur.name) + '</p>' +
     '<p style="margin:2px 0 10px;font-size:16px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
     '<label class="field-label">実際の記録</label>' +
@@ -1743,6 +2008,7 @@ function renderPlanRun() {
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
+  renderRestBar();
 }
 
 function recordCurrentSet() {
@@ -1765,13 +2031,15 @@ function recordCurrentSet() {
     if (!weight && !reps) return;
     set = { weight: weight || 0, reps: reps || 0 };
   }
-  const t = todayStr();
+  const t = activeRun.date || todayStr();
   let entry = workoutLogs.find(l => l.date === t && l.exercise === cur.name && l.type === cur.type);
   if (!entry) {
     entry = { id: uid(), date: t, exercise: cur.name, type: cur.type, sets: [] };
     workoutLogs.push(entry);
   }
   entry.sets.push(set);
+  // 終了ボタンを押し忘れても実際のトレ時間が出せるように、最後に記録した時刻を残す
+  activeRun.lastSetAt = Date.now();
   saveWorkoutLogs();
 }
 
@@ -1794,20 +2062,29 @@ function nextSet() {
   }
   saveActiveRun();
   renderPlanRun();
+  if (restSeconds > 0 && activeRun.currentIndex !== -1) startRest(restSeconds);
+  else stopRest();
 }
 
-function chooseNextExercise(name) {
-  const remaining = remainingQueueItems();
-  const match = remaining.find(r => r.item.name === name);
-  if (!match) return;
-  activeRun.currentIndex = match.i;
+// 種目名ではなくキュー上の位置で指定する（名前に引用符が含まれても壊れない）
+function chooseNextExercise(queueIndex) {
+  if (!activeRun || !activeRun.queue[queueIndex]) return;
+  if (activeRun.doneIndices.indexOf(queueIndex) !== -1) return;
+  activeRun.currentIndex = queueIndex;
   saveActiveRun();
   renderPlanRun();
 }
 
 function completePlanRun() {
-  const durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
-  planHistory.push({ id: uid(), planName: activeRun.planName, date: todayStr(), durationMin, status: 'completed' });
+  // 終了時刻は「最後にセットを記録した時刻」。終了ボタンを押し忘れて放置しても実時間に近い値になる
+  const endedAt = activeRun.lastSetAt || Date.now();
+  let durationMin = Math.max(1, Math.round((endedAt - activeRun.startedAt) / 60000));
+  const MAX_DURATION_MIN = 300;
+  if (durationMin > MAX_DURATION_MIN) {
+    alert('開始から' + durationMin + '分経過していたため、記録時間を' + MAX_DURATION_MIN + '分として保存します。\n実際と違う場合は「トレ平均時間」から削除できます。');
+    durationMin = MAX_DURATION_MIN;
+  }
+  planHistory.push({ id: uid(), planName: activeRun.planName, date: activeRun.date || todayStr(), durationMin, status: 'completed' });
   savePlanHistory();
   if (activeRun.scheduleDate) {
     const sched = scheduledPlans.find(s => s.date === activeRun.scheduleDate);
@@ -1817,6 +2094,7 @@ function completePlanRun() {
 }
 
 function finishPlan() {
+  stopRest();
   activeRun = null;
   saveActiveRun();
   renderPlanScreen();
@@ -1824,6 +2102,117 @@ function finishPlan() {
 
 function quitPlan() {
   if (confirm('プランを中断しますか？')) finishPlan();
+}
+
+/* ---------- インターバル（休憩）タイマー ---------- */
+
+let restSeconds = store.get('restSeconds', 60);
+let restEndsAt = null;
+let restIntervalId = null;
+let restDone = false;
+let restAudioCtx = null;
+
+function saveRestSeconds() {
+  restSeconds = parseInt(document.getElementById('rest-seconds-select').value, 10) || 0;
+  store.set('restSeconds', restSeconds);
+}
+
+function mmss(sec) {
+  return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+
+// iOSは操作直後でないと音を出せないので、AudioContext はタップ時に用意しておく
+function prepareAudio() {
+  try {
+    if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
+  } catch (e) {}
+}
+
+function beep() {
+  if (!restAudioCtx) return;
+  try {
+    [0, 0.25].forEach(offset => {
+      const osc = restAudioCtx.createOscillator(), gain = restAudioCtx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.value = 0.15;
+      osc.connect(gain);
+      gain.connect(restAudioCtx.destination);
+      osc.start(restAudioCtx.currentTime + offset);
+      osc.stop(restAudioCtx.currentTime + offset + 0.15);
+    });
+  } catch (e) {}
+}
+
+function startRest(sec) {
+  stopRestTimer();
+  restDone = false;
+  restEndsAt = Date.now() + sec * 1000;
+  prepareAudio();
+  restIntervalId = setInterval(tickRest, 250);
+  renderRestBar();
+}
+
+function stopRestTimer() {
+  if (restIntervalId) { clearInterval(restIntervalId); restIntervalId = null; }
+}
+
+function stopRest() {
+  stopRestTimer();
+  restEndsAt = null;
+  restDone = false;
+  renderRestBar();
+}
+
+function extendRest(sec) {
+  restEndsAt = Math.max(Date.now(), restEndsAt || Date.now()) + sec * 1000;
+  restDone = false;
+  if (!restIntervalId) restIntervalId = setInterval(tickRest, 250);
+  renderRestBar();
+}
+
+function tickRest() {
+  if (!restEndsAt) { stopRestTimer(); return; }
+  const el = document.getElementById('rest-remain');
+  if (!el) { stopRestTimer(); return; }
+  const left = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
+  if (left <= 0) {
+    stopRestTimer();
+    restEndsAt = null;
+    restDone = true;
+    beep();
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    renderRestBar();
+    return;
+  }
+  el.textContent = mmss(left);
+}
+
+// プラン実行画面を作り直しても消えないよう、専用の枠だけを書き換える
+function renderRestBar() {
+  const slot = document.getElementById('rest-slot');
+  if (!slot) return;
+  if (restDone) {
+    slot.innerHTML = '<div class="card" style="border:2px solid var(--accent);background:var(--accent-bg);">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+      '<span style="font-size:19px;font-weight:800;color:var(--accent-text);">⏰ 休憩終了</span>' +
+      '<button class="ghost" style="width:auto;padding:4px 8px;" onclick="stopRest()">閉じる</button>' +
+      '</div></div>';
+    return;
+  }
+  if (!restEndsAt) { slot.innerHTML = ''; return; }
+  const left = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
+  slot.innerHTML = '<div class="card">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+    '<span style="font-size:15px;color:var(--text-muted);font-weight:700;">休憩</span>' +
+    '<span id="rest-remain" style="font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;">' + mmss(left) + '</span>' +
+    '</div>' +
+    '<div class="row" style="margin-top:10px;">' +
+    '<button class="secondary" onclick="extendRest(30)">＋30秒</button>' +
+    '<button class="secondary" onclick="stopRest()">スキップ</button>' +
+    '</div></div>';
+  // 他の画面を見ている間に止まったカウントダウンを再開する
+  if (!restIntervalId) restIntervalId = setInterval(tickRest, 250);
 }
 
 /* ---------- マシン管理 ---------- */
@@ -1845,9 +2234,39 @@ function renderMachineList() {
     '<div class="machine-row">' +
     '<span class="mname">' + escapeHtml(m.name) + ' <span style="color:var(--text-muted);font-weight:500;font-size:14px;">(' + (m.part || 'その他') + ')</span></span>' +
     '<span class="badge' + badgeClassFor(m.type) + '">' + typeLabel(m.type) + '</span>' +
+    '<span style="color:var(--text-secondary);font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;" onclick="renameMachine(\'' + m.id + '\')">変更</span>' +
     '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="deleteMachine(\'' + m.id + '\')">削除</span>' +
     '</div>'
   ).join('');
+}
+
+// マシンと記録は名前で結び付いているので、リネーム時に過去の記録とテンプレートも一緒に書き換える
+function renameMachine(id) {
+  const machine = machines.find(m => m.id === id);
+  if (!machine) return;
+  const input = prompt('新しいマシン名', machine.name);
+  if (input === null) return;
+  const name = input.trim();
+  if (!name || name === machine.name) return;
+  if (machines.some(m => m.id !== id && m.name === name)) { alert('同じ名前のマシンがすでにあります'); return; }
+  const oldName = machine.name;
+  const logCount = workoutLogs.filter(l => l.exercise === oldName).length;
+  const planCount = plans.filter(p => p.exercises.some(e => e.name === oldName)).length;
+  const detail = [];
+  if (logCount) detail.push('過去の記録' + logCount + '件');
+  if (planCount) detail.push('テンプレート' + planCount + '件');
+  const msg = '「' + oldName + '」を「' + name + '」に変更しますか？' +
+    (detail.length ? '\n' + detail.join('・') + 'の種目名も変更されます。' : '');
+  if (!confirm(msg)) return;
+  workoutLogs.forEach(l => { if (l.exercise === oldName) l.exercise = name; });
+  plans.forEach(p => p.exercises.forEach(e => { if (e.name === oldName) e.name = name; }));
+  if (activeRun) activeRun.queue.forEach(q => { if (q.name === oldName) q.name = name; });
+  machine.name = name;
+  if (exTrendName === oldName) exTrendName = name;
+  saveWorkoutLogs(); savePlans(); saveMachines();
+  if (activeRun) saveActiveRun();
+  renderMachineList();
+  renderAll();
 }
 
 function typeLabel(type) {
@@ -1860,6 +2279,7 @@ function addMachine() {
   const input = document.getElementById('machine-new-title');
   const name = input.value.trim();
   if (!name) { alert('マシン名を入力してください'); return; }
+  if (machines.some(m => m.name === name)) { alert('同じ名前のマシンがすでにあります'); return; }
   const part = document.getElementById('machine-new-part').value;
   machines.push({ id: uid(), name, type: newMachineType, part });
   saveMachines();
@@ -1870,6 +2290,9 @@ function addMachine() {
 }
 
 function deleteMachine(id) {
+  const machine = machines.find(m => m.id === id);
+  if (!machine) return;
+  if (!confirm('マシン「' + machine.name + '」を削除しますか？\n過去の記録は残りますが、部位が「その他」扱いになります。')) return;
   machines = machines.filter(m => m.id !== id);
   saveMachines();
   renderMachineList();
@@ -1879,6 +2302,7 @@ function deleteMachine(id) {
 
 function openSettings() {
   renderMachineList();
+  document.getElementById('rest-seconds-select').value = String(restSeconds);
   const partSel = document.getElementById('machine-new-part');
   if (!partSel.options.length) {
     partSel.innerHTML = BODY_PARTS.map(p => '<option value="' + p + '">' + p + '</option>').join('');
@@ -1890,6 +2314,7 @@ function openSettings() {
     rowLine('体重・体脂肪率', bodyLogs.length + '件') +
     rowLine('トレーニングプラン', plans.length + '件') +
     rowLine('登録マシン', machines.length + '件') +
+    rowLine('トレ時間履歴', planHistory.length + '件') +
     '</div>';
   openModal('modal-settings');
 }
@@ -1901,7 +2326,7 @@ function rowLine(label, value) {
 function exportData() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    workoutLogs, bodyLogs, plans, machines, scheduledPlans
+    workoutLogs, bodyLogs, plans, machines, scheduledPlans, planHistory
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1934,14 +2359,18 @@ function importData(event) {
         (data.machines || []).forEach(m => { if (!existingMachineNames.has(m.name)) machines.push(m); });
         const existingScheduleDates = new Set(scheduledPlans.map(s => s.date));
         (data.scheduledPlans || []).forEach(s => { if (!existingScheduleDates.has(s.date)) scheduledPlans.push(s); });
+        const existingHistoryIds = new Set(planHistory.map(h => h.id));
+        (data.planHistory || []).forEach(h => { if (!existingHistoryIds.has(h.id)) planHistory.push(h); });
       } else {
         workoutLogs = data.workoutLogs;
         bodyLogs = data.bodyLogs;
         plans = data.plans;
         machines = data.machines || machines;
         scheduledPlans = data.scheduledPlans || [];
+        // planHistory を持たない古いバックアップで既存のトレ時間履歴を消さない
+        planHistory = data.planHistory || planHistory;
       }
-      saveWorkoutLogs(); saveBodyLogs(); savePlans(); saveMachines(); saveScheduledPlans();
+      saveWorkoutLogs(); saveBodyLogs(); savePlans(); saveMachines(); saveScheduledPlans(); savePlanHistory();
       closeModal('modal-settings');
       renderAll();
       alert('インポートが完了しました');
@@ -1954,9 +2383,9 @@ function importData(event) {
 }
 
 function resetAllData() {
-  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・プラン・マシン・予定がすべて消え、元に戻せません。')) return;
+  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・プラン・マシン・予定・トレ時間履歴がすべて消え、元に戻せません。')) return;
   if (!confirm('本当によろしいですか？この操作は取り消せません。')) return;
-  ['workoutLogs', 'bodyLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun'].forEach(key => localStorage.removeItem(key));
+  ['workoutLogs', 'bodyLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun', 'planHistory'].forEach(key => localStorage.removeItem(key));
   location.reload();
 }
 
@@ -1982,6 +2411,48 @@ mainEl.addEventListener('touchend', e => {
   else if (dx > 0 && idx > 0) showScreen(SCREEN_ORDER[idx - 1]);
 }, { passive: true });
 
+/* ---------- モーダルの閉じ方 ---------- */
+
+// シート外の暗い部分をタップ、または Esc で閉じる
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('click', e => { if (e.target === bd) closeModal(bd.id); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = [...document.querySelectorAll('.modal-backdrop.active')].pop();
+  if (open) closeModal(open.id);
+});
+
+/* ---------- タブのキーボード操作 ---------- */
+
+document.querySelectorAll('nav .tab').forEach(tab => {
+  tab.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    showScreen(tab.dataset.screen);
+  });
+});
+
+/* ---------- 日付が変わったときの再描画 ---------- */
+
+// ホーム画面に置いたまま日をまたぐと「今日」の判定がずれるので、復帰時に作り直す
+let lastKnownDay = todayStr();
+function handleDayChange() {
+  const t = todayStr();
+  if (t === lastKnownDay) return;
+  const prev = lastKnownDay;
+  lastKnownDay = t;
+  document.getElementById('header-date').textContent = fmtDateLabel(t);
+  if (recordViewDate === prev) recordViewDate = t;
+  if (selectedResultDate === prev) selectedResultDate = t;
+  if (calendarViewMonth === prev.slice(0, 7)) calendarViewMonth = t.slice(0, 7);
+  renderAll();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') handleDayChange();
+});
+window.addEventListener('focus', handleDayChange);
+
 /* ---------- init ---------- */
 
 function renderAll() {
@@ -1992,6 +2463,13 @@ function renderAll() {
 }
 
 renderAll();
+
+// オフライン起動用。file:// では Service Worker が使えないので http(s) のときだけ登録する
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
