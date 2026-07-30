@@ -308,6 +308,10 @@
 
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">体重・体脂肪の推移</p>
+        <div class="row" style="margin-bottom:10px;">
+          <div class="stat"><p>平均体重(1ヶ月)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
+          <div class="stat"><p>平均体脂肪率(1ヶ月)</p><p id="res-body-avg-fat">-<span class="unit">%</span></p></div>
+        </div>
         <div id="res-body-chart"></div>
       </div>
     </section>
@@ -1389,6 +1393,16 @@ function renderResultsBodyChart() {
   const cutoffStr = daysAgoStr(90);
   const inRange = sorted.filter(b => b.date >= cutoffStr);
   document.getElementById('res-body-chart').innerHTML = bodyDualChartSvg(inRange);
+
+  const monthCutoffStr = daysAgoStr(30);
+  const monthLogs = sorted.filter(b => b.date >= monthCutoffStr);
+  const weightVals = monthLogs.filter(b => b.weight != null).map(b => b.weight);
+  const fatVals = monthLogs.filter(b => b.fat != null).map(b => b.fat);
+  const avg = vals => vals.length ? round1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  const avgWeight = avg(weightVals);
+  const avgFat = avg(fatVals);
+  document.getElementById('res-body-avg-weight').innerHTML = (avgWeight != null ? avgWeight : '-') + '<span class="unit">kg</span>';
+  document.getElementById('res-body-avg-fat').innerHTML = (avgFat != null ? avgFat : '-') + '<span class="unit">%</span>';
 }
 
 /* ---------- からだ ---------- */
