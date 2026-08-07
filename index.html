@@ -111,9 +111,10 @@
   }
   input:focus, select:focus { outline: none; border-color: var(--accent); border-width: 2px; }
   input[type="checkbox"] { width: auto; height: auto; }
-  /* iOS Safariはtype=date/timeの内部コントロール分の幅を確保しようとして枠からはみ出すことがあるため、
-     幅をwidth:100%に強制し、フォントとパディングを詰めて内部コントロールの必要幅を減らす */
+  /* iOS Safariはtype=date/timeのネイティブ見た目(chrome)がwidth指定を無視して
+     枠からはみ出すことがあるため、appearanceを外して独自の幅指定を効かせる */
   input[type="date"], input[type="time"] {
+    -webkit-appearance: none; appearance: none;
     width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
     font-size: 16px; padding: 0 8px;
   }
@@ -383,13 +384,13 @@
         <div class="row" style="margin-bottom:8px;">
           <input type="number" step="1" min="0" max="100" id="sleep-score-input" placeholder="睡眠スコア">
         </div>
-        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間</label>
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間（例: 5:13）</label>
         <div class="row" style="margin-bottom:8px;">
-          <input type="time" id="sleep-duration-input">
+          <input type="text" inputmode="numeric" pattern="[0-9]{1,2}:[0-9]{2}" placeholder="H:MM" id="sleep-duration-input">
         </div>
-        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間</label>
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間（例: 23:45）</label>
         <div class="row" style="margin-bottom:8px;">
-          <input type="time" id="sleep-bedtime-input">
+          <input type="text" inputmode="numeric" pattern="[0-9]{1,2}:[0-9]{2}" placeholder="H:MM" id="sleep-bedtime-input">
         </div>
         <button class="primary" onclick="saveSleepLog()">保存</button>
         <p id="sleep-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
