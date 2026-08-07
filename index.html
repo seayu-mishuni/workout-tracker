@@ -111,6 +111,12 @@
   }
   input:focus, select:focus { outline: none; border-color: var(--accent); border-width: 2px; }
   input[type="checkbox"] { width: auto; height: auto; }
+  /* iOS Safariはtype=date/timeの内部コントロール分の幅を確保しようとして枠からはみ出すことがあるため、
+     幅をwidth:100%に強制し、フォントとパディングを詰めて内部コントロールの必要幅を減らす */
+  input[type="date"], input[type="time"] {
+    width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+    font-size: 16px; padding: 0 8px;
+  }
   label.field-label { font-size: 14px; color: var(--text-secondary); font-weight: 700; display: block; margin-bottom: 7px; letter-spacing: 0.02em; }
   button.primary {
     background: var(--accent); color: var(--accent-on); border: none; border-radius: 10px;
@@ -359,7 +365,7 @@
         <div class="stat"><p>除脂肪体重</p><p id="body-lean">-<span class="unit">kg</span></p></div>
       </div>
       <div class="card">
-        <details open>
+        <details>
           <summary class="field-label" style="cursor:pointer;">記録の履歴</summary>
           <div id="body-log-list" style="margin-top:8px;"></div>
         </details>
@@ -377,9 +383,9 @@
         <div class="row" style="margin-bottom:8px;">
           <input type="number" step="1" min="0" max="100" id="sleep-score-input" placeholder="睡眠スコア">
         </div>
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間</label>
         <div class="row" style="margin-bottom:8px;">
-          <input type="number" step="1" min="0" max="23" id="sleep-hours-input" placeholder="睡眠時間　時間">
-          <input type="number" step="1" min="0" max="59" id="sleep-minutes-input" placeholder="分">
+          <input type="time" id="sleep-duration-input">
         </div>
         <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間</label>
         <div class="row" style="margin-bottom:8px;">
@@ -392,7 +398,7 @@
         <div id="sleep-chart"></div>
       </div>
       <div class="card">
-        <details open>
+        <details>
           <summary class="field-label" style="cursor:pointer;">睡眠記録の履歴</summary>
           <div id="sleep-log-list" style="margin-top:8px;"></div>
         </details>
@@ -1550,11 +1556,16 @@ function formatHm(decimalHours) {
   return h + '時間' + m + '分';
 }
 
+// "HH:MM" の時刻入力を decimal hours に変換する（睡眠時間の入力に time input を流用しているため）
+function hmStrToHours(str) {
+  const m = (str || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return NaN;
+  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+}
+
 function saveSleepLog() {
   const score = parseFloat(document.getElementById('sleep-score-input').value);
-  const h = parseFloat(document.getElementById('sleep-hours-input').value);
-  const m = parseFloat(document.getElementById('sleep-minutes-input').value);
-  const hours = (isNaN(h) && isNaN(m)) ? NaN : (isNaN(h) ? 0 : h) + (isNaN(m) ? 0 : m) / 60;
+  const hours = hmStrToHours(document.getElementById('sleep-duration-input').value);
   const bedtime = document.getElementById('sleep-bedtime-input').value || null;
   if (isNaN(score) && isNaN(hours) && !bedtime) { alert('睡眠スコア・睡眠時間・就寝時間のいずれかを入力してください'); return; }
   const dateInput = document.getElementById('sleep-date-input');
@@ -1569,12 +1580,18 @@ function saveSleepLog() {
   }
   saveSleepLogs();
   document.getElementById('sleep-score-input').value = '';
-  document.getElementById('sleep-hours-input').value = '';
-  document.getElementById('sleep-minutes-input').value = '';
+  document.getElementById('sleep-duration-input').value = '';
   document.getElementById('sleep-bedtime-input').value = '';
   dateInput.value = todayStr();
   document.getElementById('sleep-input-note').textContent = '同じ日付の記録があれば上書きされます。';
   renderSleep();
+}
+
+// decimal hours を time input 用の "HH:MM" 文字列に戻す
+function hoursToHmStr(hours) {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
 }
 
 // 過去の記録を入力欄に読み込んで修正できるようにする
@@ -1583,13 +1600,7 @@ function editSleepLog(date) {
   if (!log) return;
   document.getElementById('sleep-date-input').value = log.date;
   document.getElementById('sleep-score-input').value = log.score != null ? log.score : '';
-  if (log.hours != null) {
-    document.getElementById('sleep-hours-input').value = Math.floor(log.hours);
-    document.getElementById('sleep-minutes-input').value = Math.round((log.hours - Math.floor(log.hours)) * 60);
-  } else {
-    document.getElementById('sleep-hours-input').value = '';
-    document.getElementById('sleep-minutes-input').value = '';
-  }
+  document.getElementById('sleep-duration-input').value = log.hours != null ? hoursToHmStr(log.hours) : '';
   document.getElementById('sleep-bedtime-input').value = log.bedtime || '';
   document.getElementById('sleep-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
   document.getElementById('sleep-date-input').scrollIntoView({ block: 'center' });
