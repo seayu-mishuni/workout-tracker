@@ -314,6 +314,15 @@
         </div>
         <div id="res-body-chart"></div>
       </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">😴 睡眠の推移</p>
+        <div class="row" style="margin-bottom:10px;">
+          <div class="stat"><p>平均睡眠スコア(1ヶ月)</p><p id="res-sleep-avg-score">-<span class="unit">点</span></p></div>
+          <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
+        </div>
+        <div id="res-sleep-chart"></div>
+      </div>
     </section>
 
     <section id="screen-body" class="screen">
@@ -352,6 +361,37 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:4px;">記録の履歴</p>
         <div id="body-log-list"></div>
+      </div>
+
+      <p class="field-label" style="margin:20px 0 12px;">😴 睡眠（iPhoneのヘルスアプリの値を入力）</p>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="stat"><p>睡眠スコア</p><p id="sleep-score-latest">-<span class="unit">点</span></p></div>
+        <div class="stat"><p>睡眠時間</p><p id="sleep-hours-latest">-</p></div>
+        <div class="stat"><p>就寝時間</p><p id="sleep-bedtime-latest">-</p></div>
+      </div>
+      <div class="card">
+        <label class="field-label">記録を入力</label>
+        <input type="date" id="sleep-date-input" style="margin-bottom:8px;">
+        <div class="row" style="margin-bottom:8px;">
+          <input type="number" step="1" min="0" max="100" id="sleep-score-input" placeholder="睡眠スコア">
+        </div>
+        <div class="row" style="margin-bottom:8px;">
+          <input type="number" step="1" min="0" max="23" id="sleep-hours-input" placeholder="睡眠時間　時間">
+          <input type="number" step="1" min="0" max="59" id="sleep-minutes-input" placeholder="分">
+        </div>
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間</label>
+        <div class="row" style="margin-bottom:8px;">
+          <input type="time" id="sleep-bedtime-input">
+        </div>
+        <button class="primary" onclick="saveSleepLog()">保存</button>
+        <p id="sleep-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
+      </div>
+      <div class="card">
+        <div id="sleep-chart"></div>
+      </div>
+      <div class="card">
+        <p class="field-label" style="margin-bottom:4px;">睡眠記録の履歴</p>
+        <div id="sleep-log-list"></div>
       </div>
     </section>
 
@@ -597,6 +637,7 @@ const DEFAULT_PLANS = [
 
 let workoutLogs = store.get('workoutLogs', []);
 let bodyLogs = store.get('bodyLogs', []);
+let sleepLogs = store.get('sleepLogs', []);
 let plans = store.get('plans', null);
 if (!plans) {
   plans = DEFAULT_PLANS.map(p => ({ id: uid(), name: p.name, exercises: p.exercises }));
@@ -629,6 +670,7 @@ if (!machines) {
 
 function saveWorkoutLogs() { store.set('workoutLogs', workoutLogs); }
 function saveBodyLogs() { store.set('bodyLogs', bodyLogs); }
+function saveSleepLogs() { store.set('sleepLogs', sleepLogs); }
 function savePlans() { store.set('plans', plans); }
 function saveActiveRun() { store.set('activeRun', activeRun); }
 function saveMachines() { store.set('machines', machines); }
@@ -1050,6 +1092,7 @@ function renderTrainingResults() {
   renderBestList();
   renderExTrend();
   renderResultsBodyChart();
+  renderResultsSleepChart();
 }
 
 function renderResultsSummary() {
@@ -1412,6 +1455,23 @@ function renderResultsBodyChart() {
   document.getElementById('res-body-avg-fat').innerHTML = (avgFat != null ? avgFat : '-') + '<span class="unit">%</span>';
 }
 
+function renderResultsSleepChart() {
+  const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date));
+  const cutoffStr = daysAgoStr(90);
+  const inRange = sorted.filter(s => s.date >= cutoffStr);
+  document.getElementById('res-sleep-chart').innerHTML = sleepDualChartSvg(inRange);
+
+  const monthCutoffStr = daysAgoStr(30);
+  const monthLogs = sorted.filter(s => s.date >= monthCutoffStr);
+  const scoreVals = monthLogs.filter(s => s.score != null).map(s => s.score);
+  const hoursVals = monthLogs.filter(s => s.hours != null).map(s => s.hours);
+  const avg = vals => vals.length ? round1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  const avgScore = avg(scoreVals);
+  const avgHours = avg(hoursVals);
+  document.getElementById('res-sleep-avg-score').innerHTML = (avgScore != null ? avgScore : '-') + '<span class="unit">点</span>';
+  document.getElementById('res-sleep-avg-hours').textContent = avgHours != null ? formatHm(avgHours) : '-';
+}
+
 /* ---------- からだ ---------- */
 
 let bodyRangeDays = 30;
@@ -1478,6 +1538,105 @@ function renderBodyLogList() {
   ).join('');
 }
 
+// 「H時間M分」表示用。内部は互換のため時間の小数値(decimal hours)のまま保持する
+function formatHm(decimalHours) {
+  if (decimalHours == null) return '-';
+  const h = Math.floor(decimalHours);
+  const m = Math.round((decimalHours - h) * 60);
+  return h + '時間' + m + '分';
+}
+
+function saveSleepLog() {
+  const score = parseFloat(document.getElementById('sleep-score-input').value);
+  const h = parseFloat(document.getElementById('sleep-hours-input').value);
+  const m = parseFloat(document.getElementById('sleep-minutes-input').value);
+  const hours = (isNaN(h) && isNaN(m)) ? NaN : (isNaN(h) ? 0 : h) + (isNaN(m) ? 0 : m) / 60;
+  const bedtime = document.getElementById('sleep-bedtime-input').value || null;
+  if (isNaN(score) && isNaN(hours) && !bedtime) { alert('睡眠スコア・睡眠時間・就寝時間のいずれかを入力してください'); return; }
+  const dateInput = document.getElementById('sleep-date-input');
+  const t = dateInput.value || todayStr();
+  const existing = sleepLogs.find(s => s.date === t);
+  if (existing) {
+    existing.score = isNaN(score) ? existing.score : score;
+    existing.hours = isNaN(hours) ? existing.hours : hours;
+    existing.bedtime = bedtime || existing.bedtime;
+  } else {
+    sleepLogs.push({ date: t, score: isNaN(score) ? null : score, hours: isNaN(hours) ? null : hours, bedtime: bedtime });
+  }
+  saveSleepLogs();
+  document.getElementById('sleep-score-input').value = '';
+  document.getElementById('sleep-hours-input').value = '';
+  document.getElementById('sleep-minutes-input').value = '';
+  document.getElementById('sleep-bedtime-input').value = '';
+  dateInput.value = todayStr();
+  document.getElementById('sleep-input-note').textContent = '同じ日付の記録があれば上書きされます。';
+  renderSleep();
+}
+
+// 過去の記録を入力欄に読み込んで修正できるようにする
+function editSleepLog(date) {
+  const log = sleepLogs.find(s => s.date === date);
+  if (!log) return;
+  document.getElementById('sleep-date-input').value = log.date;
+  document.getElementById('sleep-score-input').value = log.score != null ? log.score : '';
+  if (log.hours != null) {
+    document.getElementById('sleep-hours-input').value = Math.floor(log.hours);
+    document.getElementById('sleep-minutes-input').value = Math.round((log.hours - Math.floor(log.hours)) * 60);
+  } else {
+    document.getElementById('sleep-hours-input').value = '';
+    document.getElementById('sleep-minutes-input').value = '';
+  }
+  document.getElementById('sleep-bedtime-input').value = log.bedtime || '';
+  document.getElementById('sleep-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
+  document.getElementById('sleep-date-input').scrollIntoView({ block: 'center' });
+}
+
+function deleteSleepLog(date) {
+  if (!confirm(fmtDateLabel(date) + 'の睡眠記録を削除しますか？')) return;
+  sleepLogs = sleepLogs.filter(s => s.date !== date);
+  saveSleepLogs();
+  renderSleep();
+}
+
+function renderSleepLogList() {
+  const el = document.getElementById('sleep-log-list');
+  const sorted = [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(s =>
+    '<div class="list-item">' +
+    '<div class="lt"><p>' + fmtDateLabel(s.date) + '</p>' +
+    '<p>' + (s.score != null ? s.score + '点' : '-') + (s.hours != null ? ' ・ ' + formatHm(s.hours) : '') + (s.bedtime ? ' ・ 就寝' + s.bedtime : '') + '</p></div>' +
+    '<span style="color:var(--text-secondary);font-size:15px;font-weight:700;cursor:pointer;" onclick="editSleepLog(\'' + s.date + '\')">編集</span>' +
+    '<span style="color:var(--coral);font-size:15px;font-weight:700;cursor:pointer;" onclick="deleteSleepLog(\'' + s.date + '\')">削除</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderSleep() {
+  const dateInput = document.getElementById('sleep-date-input');
+  if (!dateInput.value) dateInput.value = todayStr();
+  renderSleepLogList();
+  const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date));
+  if (sorted.length === 0) {
+    document.getElementById('sleep-score-latest').innerHTML = '-<span class="unit">点</span>';
+    document.getElementById('sleep-hours-latest').textContent = '-';
+    document.getElementById('sleep-bedtime-latest').textContent = '-';
+    document.getElementById('sleep-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
+    return;
+  }
+  const latest = sorted[sorted.length - 1];
+  document.getElementById('sleep-score-latest').innerHTML = (latest.score != null ? latest.score : '-') + '<span class="unit">点</span>';
+  document.getElementById('sleep-hours-latest').textContent = formatHm(latest.hours);
+  document.getElementById('sleep-bedtime-latest').textContent = latest.bedtime || '-';
+
+  const cutoffStr = daysAgoStr(bodyRangeDays);
+  const inRange = sorted.filter(s => s.date >= cutoffStr);
+  document.getElementById('sleep-chart').innerHTML = sleepDualChartSvg(inRange);
+}
+
 function renderBody() {
   const dateInput = document.getElementById('body-date-input');
   if (!dateInput.value) dateInput.value = todayStr();
@@ -1491,6 +1650,7 @@ function renderBody() {
     document.getElementById('body-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
     document.getElementById('body-month-diff').textContent = '-';
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
+    renderSleep();
     return;
   }
   const latest = sorted[sorted.length - 1];
@@ -1525,6 +1685,7 @@ function renderBody() {
   } else {
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
   }
+  renderSleep();
 }
 
 function smoothPath(points) {
@@ -1661,6 +1822,111 @@ function bodyDualChartSvg(logs) {
     '<circle cx="' + lastW.x + '" cy="' + lastW.y + '" r="6" fill="var(--purple)" fill-opacity="0.18"/>' +
     '<circle cx="' + lastW.x + '" cy="' + lastW.y + '" r="4" fill="var(--purple)" stroke="var(--card)" stroke-width="2"/>' +
     fatPart +
+    '</svg>';
+}
+
+function sleepDualChartSvg(logs) {
+  logs = logs.filter(l => l.score != null || l.hours != null);
+  if (logs.length === 0) return '<div class="empty">データがありません</div>';
+  bodyChartInstanceCounter++;
+  const gradId = 'sleepScoreGrad' + bodyChartInstanceCounter;
+  const w = 360, h = 210, padL = 52, padR = 52, padT = 24, padB = 34;
+  const plotH = h - padT - padB;
+  const scores = logs.filter(l => l.score != null).map(l => l.score);
+  const hoursList = logs.filter(l => l.hours != null).map(l => l.hours);
+
+  function paddedRange(min, max) {
+    if (min === max) { min -= 1; max += 1; }
+    const pad = (max - min) * 0.2;
+    return [min - pad, max + pad];
+  }
+  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+
+  function mdLabel(dateStr) {
+    return parseInt(dateStr.slice(5, 7), 10) + '/' + parseInt(dateStr.slice(8, 10), 10);
+  }
+
+  let grid = '';
+  let sLo = 0, sHi = 100;
+  if (scores.length > 0) [sLo, sHi] = paddedRange(Math.min(...scores), Math.max(...scores));
+  const sy = v => padT + plotH * (1 - (v - sLo) / (sHi - sLo));
+  let hLo = 0, hHi = 0;
+  if (hoursList.length > 0) [hLo, hHi] = paddedRange(Math.min(...hoursList), Math.max(...hoursList));
+
+  if (scores.length > 0) {
+    [0, 0.5, 1].forEach(t => {
+      const y = padT + plotH * t;
+      const sVal = round1(sHi - (sHi - sLo) * t);
+      grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
+      grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + sVal + '</text>';
+    });
+  }
+  if (hoursList.length > 0) {
+    [0, 0.5, 1].forEach(t => {
+      const y = padT + plotH * t;
+      const hVal = round1(hHi - (hHi - hLo) * t);
+      grid += '<text x="' + (w - padR + 8) + '" y="' + (y + 4) + '" text-anchor="start" font-size="12" font-weight="600" fill="var(--text-muted)">' + hVal + '</text>';
+    });
+  }
+
+  const first = logs[0], lastLog = logs[logs.length - 1];
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
+  if (logs.length > 1) {
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
+  }
+
+  const showDots = logs.length <= 20;
+  let scorePart = '', lastScoreVal = null;
+  if (scores.length > 0) {
+    const scoreCoords = logs.map((l, i) => l.score == null ? null : { x: padL + step * i, y: sy(l.score) }).filter(Boolean);
+    const scoreLinePath = smoothPath(scoreCoords);
+    const lastS = scoreCoords[scoreCoords.length - 1];
+    lastScoreVal = [...logs].reverse().find(l => l.score != null).score;
+    const scoreAreaPath = scoreLinePath +
+      ' L' + scoreCoords[scoreCoords.length - 1].x + ',' + (h - padB) +
+      ' L' + scoreCoords[0].x + ',' + (h - padB) + ' Z';
+    const scoreDots = showDots ? scoreCoords.slice(0, -1).map(c =>
+      '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--blue-text)" stroke="var(--card)" stroke-width="1.5"/>'
+    ).join('') : '';
+    scorePart = '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var(--blue-text)" stop-opacity="0.22"/>' +
+      '<stop offset="100%" stop-color="var(--blue-text)" stop-opacity="0"/>' +
+      '</linearGradient></defs>' +
+      '<path d="' + scoreAreaPath + '" fill="url(#' + gradId + ')" stroke="none"/>' +
+      '<path d="' + scoreLinePath + '" fill="none" stroke="var(--blue-text)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      scoreDots +
+      '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="6" fill="var(--blue-text)" fill-opacity="0.18"/>' +
+      '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="4" fill="var(--blue-text)" stroke="var(--card)" stroke-width="2"/>';
+  }
+
+  let hoursPart = '', lastHoursVal = null;
+  if (hoursList.length > 0) {
+    const hy = v => padT + plotH * (1 - (v - hLo) / (hHi - hLo));
+    const hoursCoords = logs.map((l, i) => l.hours == null ? null : { x: padL + step * i, y: hy(l.hours) }).filter(Boolean);
+    const hoursLinePath = smoothPath(hoursCoords);
+    const lastH = hoursCoords[hoursCoords.length - 1];
+    lastHoursVal = [...logs].reverse().find(l => l.hours != null).hours;
+    const hoursDots = showDots ? hoursCoords.slice(0, -1).map(c =>
+      '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--amber)" stroke="var(--card)" stroke-width="1.5"/>'
+    ).join('') : '';
+    hoursPart = '<path d="' + hoursLinePath + '" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 6"/>' +
+      hoursDots +
+      '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="6" fill="var(--amber)" fill-opacity="0.18"/>' +
+      '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="4" fill="var(--amber)" stroke="var(--card)" stroke-width="2"/>';
+  }
+
+  return '<div style="display:flex;gap:16px;font-size:14px;font-weight:700;margin-bottom:8px;">' +
+    '<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);white-space:nowrap;">' +
+      '<span style="width:14px;height:3px;border-radius:2px;background:var(--blue-text);display:inline-block;"></span>' +
+      '睡眠スコア' + (lastScoreVal != null ? ' ' + lastScoreVal + '点' : '') + '（左）</span>' +
+    '<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);white-space:nowrap;">' +
+      '<span style="width:14px;height:0;border-top:3px dotted var(--amber);display:inline-block;"></span>' +
+      '睡眠時間' + (lastHoursVal != null ? ' ' + formatHm(lastHoursVal) : '') + '（右）</span>' +
+    '</div>' +
+    '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
+    grid +
+    scorePart +
+    hoursPart +
     '</svg>';
 }
 
@@ -2333,6 +2599,7 @@ function openSettings() {
     '<div class="row" style="flex-direction:column;gap:4px;">' +
     rowLine('ワークアウト記録', workoutLogs.length + '件') +
     rowLine('体重・体脂肪率', bodyLogs.length + '件') +
+    rowLine('睡眠記録', sleepLogs.length + '件') +
     rowLine('トレーニングプラン', plans.length + '件') +
     rowLine('登録マシン', machines.length + '件') +
     rowLine('トレ時間履歴', planHistory.length + '件') +
@@ -2347,7 +2614,7 @@ function rowLine(label, value) {
 function exportData() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    workoutLogs, bodyLogs, plans, machines, scheduledPlans, planHistory
+    workoutLogs, bodyLogs, sleepLogs, plans, machines, scheduledPlans, planHistory
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2374,6 +2641,8 @@ function importData(event) {
         data.workoutLogs.forEach(l => { if (!existingIds.has(l.id)) workoutLogs.push(l); });
         const existingBodyDates = new Set(bodyLogs.map(b => b.date));
         data.bodyLogs.forEach(b => { if (!existingBodyDates.has(b.date)) bodyLogs.push(b); });
+        const existingSleepDates = new Set(sleepLogs.map(s => s.date));
+        (data.sleepLogs || []).forEach(s => { if (!existingSleepDates.has(s.date)) sleepLogs.push(s); });
         const existingPlanIds = new Set(plans.map(p => p.id));
         data.plans.forEach(p => { if (!existingPlanIds.has(p.id)) plans.push(p); });
         const existingMachineNames = new Set(machines.map(m => m.name));
@@ -2385,13 +2654,14 @@ function importData(event) {
       } else {
         workoutLogs = data.workoutLogs;
         bodyLogs = data.bodyLogs;
+        sleepLogs = data.sleepLogs || sleepLogs;
         plans = data.plans;
         machines = data.machines || machines;
         scheduledPlans = data.scheduledPlans || [];
         // planHistory を持たない古いバックアップで既存のトレ時間履歴を消さない
         planHistory = data.planHistory || planHistory;
       }
-      saveWorkoutLogs(); saveBodyLogs(); savePlans(); saveMachines(); saveScheduledPlans(); savePlanHistory();
+      saveWorkoutLogs(); saveBodyLogs(); saveSleepLogs(); savePlans(); saveMachines(); saveScheduledPlans(); savePlanHistory();
       closeModal('modal-settings');
       renderAll();
       alert('インポートが完了しました');
@@ -2404,9 +2674,9 @@ function importData(event) {
 }
 
 function resetAllData() {
-  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・プラン・マシン・予定・トレ時間履歴がすべて消え、元に戻せません。')) return;
+  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・睡眠記録・プラン・マシン・予定・トレ時間履歴がすべて消え、元に戻せません。')) return;
   if (!confirm('本当によろしいですか？この操作は取り消せません。')) return;
-  ['workoutLogs', 'bodyLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun', 'planHistory'].forEach(key => localStorage.removeItem(key));
+  ['workoutLogs', 'bodyLogs', 'sleepLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun', 'planHistory'].forEach(key => localStorage.removeItem(key));
   location.reload();
 }
 
