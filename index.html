@@ -306,6 +306,7 @@
         <div class="row" style="margin-bottom:10px;">
           <div class="stat"><p>平均睡眠スコア(1ヶ月)</p><p id="res-sleep-avg-score">-<span class="unit">点</span></p></div>
           <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
+          <div class="stat"><p>直近の就寝時間</p><p id="res-sleep-latest-bedtime">-</p></div>
         </div>
         <div id="res-sleep-chart"></div>
       </div>
@@ -1474,6 +1475,9 @@ function renderResultsSleepChart() {
   const avgHours = avg(hoursVals);
   document.getElementById('res-sleep-avg-score').innerHTML = (avgScore != null ? avgScore : '-') + '<span class="unit">点</span>';
   document.getElementById('res-sleep-avg-hours').textContent = avgHours != null ? formatHm(avgHours) : '-';
+
+  const latestBedtime = [...sorted].reverse().find(s => s.bedtime);
+  document.getElementById('res-sleep-latest-bedtime').textContent = latestBedtime ? latestBedtime.bedtime : '-';
 }
 
 /* ---------- からだ ---------- */
