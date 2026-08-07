@@ -293,6 +293,24 @@
       </div>
 
       <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">体重・体脂肪の推移</p>
+        <div class="row" style="margin-bottom:10px;">
+          <div class="stat"><p>平均体重(1ヶ月)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
+          <div class="stat"><p>平均体脂肪率(1ヶ月)</p><p id="res-body-avg-fat">-<span class="unit">%</span></p></div>
+        </div>
+        <div id="res-body-chart"></div>
+      </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">😴 睡眠の推移</p>
+        <div class="row" style="margin-bottom:10px;">
+          <div class="stat"><p>平均睡眠スコア(1ヶ月)</p><p id="res-sleep-avg-score">-<span class="unit">点</span></p></div>
+          <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
+        </div>
+        <div id="res-sleep-chart"></div>
+      </div>
+
+      <div class="card">
         <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
         <div id="res-assessment"></div>
       </div>
@@ -311,24 +329,6 @@
           <button data-days="0" onclick="setExTrendRange(0,this)">全期間</button>
         </div>
         <div id="ex-trend-chart"></div>
-      </div>
-
-      <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">体重・体脂肪の推移</p>
-        <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均体重(1ヶ月)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
-          <div class="stat"><p>平均体脂肪率(1ヶ月)</p><p id="res-body-avg-fat">-<span class="unit">%</span></p></div>
-        </div>
-        <div id="res-body-chart"></div>
-      </div>
-
-      <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">😴 睡眠の推移</p>
-        <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均睡眠スコア(1ヶ月)</p><p id="res-sleep-avg-score">-<span class="unit">点</span></p></div>
-          <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
-        </div>
-        <div id="res-sleep-chart"></div>
       </div>
     </section>
 
