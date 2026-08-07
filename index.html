@@ -353,14 +353,6 @@
         <button class="primary" onclick="saveBodyLog()">保存</button>
         <p id="body-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
       </div>
-      <div class="card">
-        <div class="seg">
-          <button class="active" data-range="30" onclick="setBodyRange(30,this)">1ヶ月</button>
-          <button data-range="90" onclick="setBodyRange(90,this)">3ヶ月</button>
-          <button data-range="365" onclick="setBodyRange(365,this)">1年</button>
-        </div>
-        <div id="body-chart"></div>
-      </div>
       <div class="row" style="margin-bottom:16px;">
         <div class="stat"><p>月初から</p><p id="body-month-diff">-</p></div>
         <div class="stat"><p>除脂肪体重</p><p id="body-lean">-<span class="unit">kg</span></p></div>
@@ -384,19 +376,20 @@
         <div class="row" style="margin-bottom:8px;">
           <input type="number" step="1" min="0" max="100" id="sleep-score-input" placeholder="睡眠スコア">
         </div>
-        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間（例: 5:13）</label>
-        <div class="row" style="margin-bottom:8px;">
-          <input type="text" inputmode="numeric" pattern="[0-9]{1,2}:[0-9]{2}" placeholder="H:MM" id="sleep-duration-input">
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間</label>
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
+          <input type="text" inputmode="numeric" maxlength="2" placeholder="H" id="sleep-duration-h" style="flex:1;text-align:center;" oninput="maskDigits(this);autoAdvance(this,'sleep-duration-m',2)">
+          <span style="font-size:20px;font-weight:700;color:var(--text-muted);">:</span>
+          <input type="text" inputmode="numeric" maxlength="2" placeholder="MM" id="sleep-duration-m" style="flex:1;text-align:center;" oninput="maskDigits(this)">
         </div>
-        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間（例: 23:45）</label>
-        <div class="row" style="margin-bottom:8px;">
-          <input type="text" inputmode="numeric" pattern="[0-9]{1,2}:[0-9]{2}" placeholder="H:MM" id="sleep-bedtime-input">
+        <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">就寝時間</label>
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
+          <input type="text" inputmode="numeric" maxlength="2" placeholder="H" id="sleep-bedtime-h" style="flex:1;text-align:center;" oninput="maskDigits(this);autoAdvance(this,'sleep-bedtime-m',2)">
+          <span style="font-size:20px;font-weight:700;color:var(--text-muted);">:</span>
+          <input type="text" inputmode="numeric" maxlength="2" placeholder="MM" id="sleep-bedtime-m" style="flex:1;text-align:center;" oninput="maskDigits(this)">
         </div>
         <button class="primary" onclick="saveSleepLog()">保存</button>
         <p id="sleep-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
-      </div>
-      <div class="card">
-        <div id="sleep-chart"></div>
       </div>
       <div class="card">
         <details>
@@ -1485,14 +1478,6 @@ function renderResultsSleepChart() {
 
 /* ---------- からだ ---------- */
 
-let bodyRangeDays = 30;
-function setBodyRange(days, btn) {
-  bodyRangeDays = days;
-  document.querySelectorAll('#screen-body .seg button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderBody();
-}
-
 function saveBodyLog() {
   const weight = parseFloat(document.getElementById('body-weight-input').value);
   const fat = parseFloat(document.getElementById('body-fat-input').value);
@@ -1557,17 +1542,48 @@ function formatHm(decimalHours) {
   return h + '時間' + m + '分';
 }
 
-// "HH:MM" の時刻入力を decimal hours に変換する（睡眠時間の入力に time input を流用しているため）
-function hmStrToHours(str) {
+// 数字以外を除去する（H/MM分割入力のマスク処理）
+function maskDigits(el) {
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, el.maxLength > 0 ? el.maxLength : undefined);
+}
+// 桁数まで入力したら次の欄にフォーカスを移す
+function autoAdvance(el, nextId, len) {
+  if (el.value.length >= len) {
+    const next = document.getElementById(nextId);
+    if (next) next.focus();
+  }
+}
+
+// H欄・MM欄をまとめて decimal hours に変換する（両方空なら NaN）
+function hmFieldsToHours(hId, mId) {
+  const h = parseInt(document.getElementById(hId).value, 10);
+  const m = parseInt(document.getElementById(mId).value, 10);
+  if (isNaN(h) && isNaN(m)) return NaN;
+  return (isNaN(h) ? 0 : h) + (isNaN(m) ? 0 : m) / 60;
+}
+// H欄・MM欄をまとめて "HH:MM" 文字列に変換する（両方空なら null）
+function hmFieldsToStr(hId, mId) {
+  const h = document.getElementById(hId).value;
+  const m = document.getElementById(mId).value;
+  if (!h && !m) return null;
+  return ('0' + (h || '0')).slice(-2) + ':' + ('0' + (m || '0')).slice(-2);
+}
+// decimal hours を H欄・MM欄に反映する
+function hoursToHmFields(hours, hId, mId) {
+  document.getElementById(hId).value = hours != null ? Math.floor(hours) : '';
+  document.getElementById(mId).value = hours != null ? Math.round((hours - Math.floor(hours)) * 60) : '';
+}
+// "HH:MM" 文字列を H欄・MM欄に反映する
+function strToHmFields(str, hId, mId) {
   const m = (str || '').match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return NaN;
-  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+  document.getElementById(hId).value = m ? m[1] : '';
+  document.getElementById(mId).value = m ? m[2] : '';
 }
 
 function saveSleepLog() {
   const score = parseFloat(document.getElementById('sleep-score-input').value);
-  const hours = hmStrToHours(document.getElementById('sleep-duration-input').value);
-  const bedtime = document.getElementById('sleep-bedtime-input').value || null;
+  const hours = hmFieldsToHours('sleep-duration-h', 'sleep-duration-m');
+  const bedtime = hmFieldsToStr('sleep-bedtime-h', 'sleep-bedtime-m');
   if (isNaN(score) && isNaN(hours) && !bedtime) { alert('睡眠スコア・睡眠時間・就寝時間のいずれかを入力してください'); return; }
   const dateInput = document.getElementById('sleep-date-input');
   const t = dateInput.value || todayStr();
@@ -1581,18 +1597,13 @@ function saveSleepLog() {
   }
   saveSleepLogs();
   document.getElementById('sleep-score-input').value = '';
-  document.getElementById('sleep-duration-input').value = '';
-  document.getElementById('sleep-bedtime-input').value = '';
+  document.getElementById('sleep-duration-h').value = '';
+  document.getElementById('sleep-duration-m').value = '';
+  document.getElementById('sleep-bedtime-h').value = '';
+  document.getElementById('sleep-bedtime-m').value = '';
   dateInput.value = todayStr();
   document.getElementById('sleep-input-note').textContent = '同じ日付の記録があれば上書きされます。';
   renderSleep();
-}
-
-// decimal hours を time input 用の "HH:MM" 文字列に戻す
-function hoursToHmStr(hours) {
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
 }
 
 // 過去の記録を入力欄に読み込んで修正できるようにする
@@ -1601,8 +1612,8 @@ function editSleepLog(date) {
   if (!log) return;
   document.getElementById('sleep-date-input').value = log.date;
   document.getElementById('sleep-score-input').value = log.score != null ? log.score : '';
-  document.getElementById('sleep-duration-input').value = log.hours != null ? hoursToHmStr(log.hours) : '';
-  document.getElementById('sleep-bedtime-input').value = log.bedtime || '';
+  hoursToHmFields(log.hours, 'sleep-duration-h', 'sleep-duration-m');
+  strToHmFields(log.bedtime, 'sleep-bedtime-h', 'sleep-bedtime-m');
   document.getElementById('sleep-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
   document.getElementById('sleep-date-input').scrollIntoView({ block: 'center' });
 }
@@ -1640,17 +1651,12 @@ function renderSleep() {
     document.getElementById('sleep-score-latest').innerHTML = '-<span class="unit">点</span>';
     document.getElementById('sleep-hours-latest').textContent = '-';
     document.getElementById('sleep-bedtime-latest').textContent = '-';
-    document.getElementById('sleep-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
     return;
   }
   const latest = sorted[sorted.length - 1];
   document.getElementById('sleep-score-latest').innerHTML = (latest.score != null ? latest.score : '-') + '<span class="unit">点</span>';
   document.getElementById('sleep-hours-latest').textContent = formatHm(latest.hours);
   document.getElementById('sleep-bedtime-latest').textContent = latest.bedtime || '-';
-
-  const cutoffStr = daysAgoStr(bodyRangeDays);
-  const inRange = sorted.filter(s => s.date >= cutoffStr);
-  document.getElementById('sleep-chart').innerHTML = sleepDualChartSvg(inRange);
 }
 
 function renderBody() {
@@ -1663,7 +1669,6 @@ function renderBody() {
     document.getElementById('body-fat-latest').innerHTML = '-<span class="unit">%</span>';
     document.getElementById('body-weight-diff').textContent = '';
     document.getElementById('body-fat-diff').textContent = '';
-    document.getElementById('body-chart').innerHTML = '<div class="empty">まだ記録がありません</div>';
     document.getElementById('body-month-diff').textContent = '-';
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
     renderSleep();
@@ -1682,10 +1687,6 @@ function renderBody() {
   }
   diffText(latest.weight, prev ? prev.weight : null, document.getElementById('body-weight-diff'));
   diffText(latest.fat, prev ? prev.fat : null, document.getElementById('body-fat-diff'));
-
-  const cutoffStr = daysAgoStr(bodyRangeDays);
-  const inRange = sorted.filter(b => b.date >= cutoffStr);
-  document.getElementById('body-chart').innerHTML = bodyDualChartSvg(inRange);
 
   const monthStart = todayStr().slice(0,7) + '-01';
   const monthLogs = sorted.filter(b => b.date >= monthStart);
