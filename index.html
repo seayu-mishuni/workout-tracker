@@ -1116,12 +1116,16 @@ function renderTodayPlanCard() {
   const s = scheduledPlans.find(x => x.date === today);
   const plan = s ? plans.find(p => p.id === s.planId) : null;
   if (!plan) {
+    el.style.border = '';
     el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p><div class="empty">予定はありません</div>';
     return;
   }
-  el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p>' +
-    '<p style="font-weight:600;font-size:18px;margin:0;">' + escapeHtml(plan.name) + '</p>' +
-    (s.completed ? '<span class="badge" style="display:inline-block;margin-top:10px;">実施済</span>' : '');
+  el.style.border = '2px solid var(--accent)';
+  const chips = plan.exercises.map(e => '<span class="mini-chip">' + escapeHtml(e.name) + '</span>').join('');
+  el.innerHTML =
+    '<p class="field-label" style="margin-bottom:10px;">📅 今日の予定' + (s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
+    '<p style="font-weight:800;font-size:21px;margin:0 0 10px;">' + escapeHtml(plan.name) + '</p>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>';
 }
 
 function renderResultsSummary() {
