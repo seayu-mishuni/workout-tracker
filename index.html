@@ -259,6 +259,8 @@
     </section>
 
     <section id="screen-progress" class="screen active">
+      <div class="card" id="today-plan-card"></div>
+
       <div class="card">
         <p class="field-label" id="res-summary-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div class="row">
@@ -304,11 +306,8 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">😴 睡眠の推移</p>
         <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均睡眠スコア(1ヶ月)</p><p id="res-sleep-avg-score">-<span class="unit">点</span></p></div>
           <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
-        </div>
-        <div class="row" style="margin-bottom:10px;">
-          <div class="stat" style="flex:0 0 calc(50% - 5px);"><p>直近の就寝時間</p><p id="res-sleep-latest-bedtime">-</p></div>
+          <div class="stat"><p>直近の就寝時間</p><p id="res-sleep-latest-bedtime">-</p></div>
         </div>
         <div id="res-sleep-chart"></div>
       </div>
@@ -336,16 +335,6 @@
     </section>
 
     <section id="screen-body" class="screen">
-      <div class="row" style="margin-bottom:12px;">
-        <div class="stat">
-          <p>体重</p><p id="body-weight-latest">-<span class="unit">kg</span></p>
-          <p id="body-weight-diff" style="font-size:15px;margin-top:2px;"></p>
-        </div>
-        <div class="stat">
-          <p>体脂肪率</p><p id="body-fat-latest">-<span class="unit">%</span></p>
-          <p id="body-fat-diff" style="font-size:15px;margin-top:2px;"></p>
-        </div>
-      </div>
       <div class="card">
         <label class="field-label">記録を入力</label>
         <input type="date" id="body-date-input" style="margin-bottom:8px;">
@@ -355,6 +344,16 @@
         </div>
         <button class="primary" onclick="saveBodyLog()">保存</button>
         <p id="body-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="stat">
+          <p>体重</p><p id="body-weight-latest" style="font-size:26px;font-weight:800;margin:5px 0 0;white-space:nowrap;">-<span class="unit">kg</span></p>
+          <p id="body-weight-diff" style="font-size:15px;margin-top:2px;"></p>
+        </div>
+        <div class="stat">
+          <p>体脂肪率</p><p id="body-fat-latest" style="font-size:26px;font-weight:800;margin:5px 0 0;white-space:nowrap;">-<span class="unit">%</span></p>
+          <p id="body-fat-diff" style="font-size:15px;margin-top:2px;"></p>
+        </div>
       </div>
       <div class="row" style="margin-bottom:16px;">
         <div class="stat"><p>月初から</p><p id="body-month-diff">-</p></div>
@@ -368,17 +367,9 @@
       </div>
 
       <p class="field-label" style="margin:20px 0 12px;">😴 睡眠（iPhoneのヘルスアプリの値を入力）</p>
-      <div class="row" style="margin-bottom:12px;">
-        <div class="stat"><p>睡眠スコア</p><p id="sleep-score-latest">-<span class="unit">点</span></p></div>
-        <div class="stat"><p>睡眠時間</p><p id="sleep-hours-latest">-</p></div>
-        <div class="stat"><p>就寝時間</p><p id="sleep-bedtime-latest">-</p></div>
-      </div>
       <div class="card">
         <label class="field-label">記録を入力</label>
         <input type="date" id="sleep-date-input" style="margin-bottom:8px;">
-        <div class="row" style="margin-bottom:8px;">
-          <input type="number" step="1" min="0" max="100" id="sleep-score-input" placeholder="睡眠スコア">
-        </div>
         <label style="font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px;">睡眠時間</label>
         <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
           <input type="text" inputmode="numeric" maxlength="2" placeholder="H" id="sleep-duration-h" style="flex:1;text-align:center;" oninput="maskDigits(this);autoAdvance(this,'sleep-duration-m',2)">
@@ -393,6 +384,10 @@
         </div>
         <button class="primary" onclick="saveSleepLog()">保存</button>
         <p id="sleep-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="stat"><p>睡眠時間</p><p id="sleep-hours-latest">-</p></div>
+        <div class="stat"><p>就寝時間</p><p id="sleep-bedtime-latest">-</p></div>
       </div>
       <div class="card">
         <details>
@@ -445,7 +440,7 @@
     <div class="type-toggle" id="ex-type-toggle">
       <button type="button" class="active" data-type="strength" onclick="setExType('strength')">筋トレ (重量×回数)</button>
       <button type="button" data-type="reps" onclick="setExType('reps')">回数のみ</button>
-      <button type="button" data-type="cardio" onclick="setExType('cardio')">有酸素 (時間・距離)</button>
+      <button type="button" data-type="cardio" onclick="setExType('cardio')">有酸素 (時間・スピード・傾斜)</button>
     </div>
     <div id="ex-sets"></div>
     <button class="secondary" style="margin-bottom:12px;" onclick="addSetRow()">＋ セットを追加</button>
@@ -633,7 +628,7 @@ const DEFAULT_MACHINES = [
 
 const DEFAULT_PLANS = [
   { name: 'ベーシックプラン', exercises: [
-    { name: 'トレッドミル', type: 'cardio', setCount: 1, duration: 20, distance: 3 },
+    { name: 'トレッドミル', type: 'cardio', setCount: 1, duration: 20, speed: 6, incline: 1 },
     { name: 'アブベンチ', type: 'reps', setCount: 3, reps: 15 },
     { name: 'チェストプレス', type: 'strength', setCount: 3, weight: 0, reps: 10 },
     { name: 'アダクション', type: 'strength', setCount: 3, weight: 0, reps: 15 },
@@ -753,7 +748,7 @@ function exerciseCardsHtml(logs) {
   if (logs.length === 0) return '<div class="empty">記録がありません</div>';
   return logs.map(l => {
     const setsText = l.sets.map(s => {
-      if (l.type === 'cardio') return (s.duration || 0) + '分' + (s.distance ? ' (' + s.distance + 'km)' : '');
+      if (l.type === 'cardio') return (s.duration || 0) + '分' + (s.speed ? ' ・ ' + s.speed + 'km/h' : '') + (s.incline ? ' ・ 傾斜' + s.incline + '%' : '');
       if (l.type === 'reps') return (s.reps || 0) + '回';
       return s.weight + 'kg × ' + s.reps;
     }).join(' / ');
@@ -874,10 +869,12 @@ function addSetRow(prefill) {
   row.className = 'set-row';
   if (exCurrentType === 'cardio') {
     const prevDuration = prefill ? (prefill.duration != null ? prefill.duration : '') : (prevRow ? prevRow.querySelector('.set-duration').value : '');
-    const prevDistance = prefill ? (prefill.distance != null ? prefill.distance : '') : (prevRow ? prevRow.querySelector('.set-distance').value : '');
+    const prevSpeed = prefill ? (prefill.speed != null ? prefill.speed : '') : (prevRow ? prevRow.querySelector('.set-speed').value : '');
+    const prevIncline = prefill ? (prefill.incline != null ? prefill.incline : '') : (prevRow ? prevRow.querySelector('.set-incline').value : '');
     row.innerHTML = '<span>セット' + idx + '</span>' +
       '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
-      '<input type="number" step="0.1" class="set-distance" placeholder="距離km(任意)" value="' + prevDistance + '">';
+      '<input type="number" step="0.1" class="set-speed" placeholder="スピードkm/h" value="' + prevSpeed + '">' +
+      '<input type="number" step="0.5" class="set-incline" placeholder="傾斜%(任意)" value="' + prevIncline + '">';
   } else if (exCurrentType === 'reps') {
     const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps-only').value : '');
     row.innerHTML = '<span>セット' + idx + '</span>' +
@@ -911,8 +908,9 @@ function saveExercise() {
   if (exCurrentType === 'cardio') {
     rows.forEach(r => {
       const duration = parseFloat(r.querySelector('.set-duration').value);
-      const distance = parseFloat(r.querySelector('.set-distance').value);
-      if (!isNaN(duration)) sets.push({ duration: duration, distance: isNaN(distance) ? null : distance });
+      const speed = parseFloat(r.querySelector('.set-speed').value);
+      const incline = parseFloat(r.querySelector('.set-incline').value);
+      if (!isNaN(duration)) sets.push({ duration: duration, speed: isNaN(speed) ? null : speed, incline: isNaN(incline) ? null : incline });
     });
   } else if (exCurrentType === 'reps') {
     rows.forEach(r => {
@@ -1092,6 +1090,7 @@ function renderResultsCalendar() {
 function renderTrainingResults() {
   if (!calendarViewMonth) calendarViewMonth = todayStr().slice(0, 7);
   if (!selectedResultDate) selectedResultDate = todayStr();
+  renderTodayPlanCard();
   renderResultsCalendar();
   renderDayDetail();
   renderResultsSummary();
@@ -1100,6 +1099,22 @@ function renderTrainingResults() {
   renderExTrend();
   renderResultsBodyChart();
   renderResultsSleepChart();
+}
+
+function renderTodayPlanCard() {
+  const el = document.getElementById('today-plan-card');
+  const today = todayStr();
+  const s = scheduledPlans.find(x => x.date === today);
+  const plan = s ? plans.find(p => p.id === s.planId) : null;
+  if (!plan) {
+    el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p><div class="empty">予定はありません</div>';
+    return;
+  }
+  el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p>' +
+    '<p style="font-weight:600;font-size:18px;margin:0 0 ' + (s.completed ? '10px' : '10px') + ';">' + escapeHtml(plan.name) + '</p>' +
+    (s.completed
+      ? '<span class="badge" style="display:inline-block;">実施済</span>'
+      : '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\', \'' + s.date + '\')">開始</button>');
 }
 
 function renderResultsSummary() {
@@ -1288,7 +1303,7 @@ function computeBests() {
     let bestVal = -Infinity, bestDate = null, unit = '';
     logs.forEach(l => {
       let val;
-      if (l.type === 'cardio') { val = l.sets.reduce((s, x) => s + (x.distance || 0), 0); unit = 'km'; }
+      if (l.type === 'cardio') { val = Math.max(...l.sets.map(s => s.speed || 0)); unit = 'km/h'; }
       else if (l.type === 'reps') { val = Math.max(...l.sets.map(s => s.reps)); unit = '回'; }
       else { val = Math.max(...l.sets.map(s => s.weight)); unit = 'kg'; }
       if (val > bestVal) { bestVal = val; bestDate = l.date; }
@@ -1470,12 +1485,9 @@ function renderResultsSleepChart() {
 
   const monthCutoffStr = daysAgoStr(30);
   const monthLogs = sorted.filter(s => s.date >= monthCutoffStr);
-  const scoreVals = monthLogs.filter(s => s.score != null).map(s => s.score);
   const hoursVals = monthLogs.filter(s => s.hours != null).map(s => s.hours);
   const avg = vals => vals.length ? round1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  const avgScore = avg(scoreVals);
   const avgHours = avg(hoursVals);
-  document.getElementById('res-sleep-avg-score').innerHTML = (avgScore != null ? avgScore : '-') + '<span class="unit">点</span>';
   document.getElementById('res-sleep-avg-hours').textContent = avgHours != null ? formatHm(avgHours) : '-';
 
   const latestBedtime = [...sorted].reverse().find(s => s.bedtime);
@@ -1525,7 +1537,8 @@ function deleteBodyLog(date) {
 
 function renderBodyLogList() {
   const el = document.getElementById('body-log-list');
-  const sorted = [...bodyLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+  const weekAgoStr = daysAgoStr(7);
+  const sorted = [...bodyLogs].filter(b => b.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) {
     el.innerHTML = '<div class="empty">まだ記録がありません</div>';
     return;
@@ -1587,22 +1600,19 @@ function strToHmFields(str, hId, mId) {
 }
 
 function saveSleepLog() {
-  const score = parseFloat(document.getElementById('sleep-score-input').value);
   const hours = hmFieldsToHours('sleep-duration-h', 'sleep-duration-m');
   const bedtime = hmFieldsToStr('sleep-bedtime-h', 'sleep-bedtime-m');
-  if (isNaN(score) && isNaN(hours) && !bedtime) { alert('睡眠スコア・睡眠時間・就寝時間のいずれかを入力してください'); return; }
+  if (isNaN(hours) && !bedtime) { alert('睡眠時間・就寝時間のいずれかを入力してください'); return; }
   const dateInput = document.getElementById('sleep-date-input');
   const t = dateInput.value || todayStr();
   const existing = sleepLogs.find(s => s.date === t);
   if (existing) {
-    existing.score = isNaN(score) ? existing.score : score;
     existing.hours = isNaN(hours) ? existing.hours : hours;
     existing.bedtime = bedtime || existing.bedtime;
   } else {
-    sleepLogs.push({ date: t, score: isNaN(score) ? null : score, hours: isNaN(hours) ? null : hours, bedtime: bedtime });
+    sleepLogs.push({ date: t, score: null, hours: isNaN(hours) ? null : hours, bedtime: bedtime });
   }
   saveSleepLogs();
-  document.getElementById('sleep-score-input').value = '';
   document.getElementById('sleep-duration-h').value = '';
   document.getElementById('sleep-duration-m').value = '';
   document.getElementById('sleep-bedtime-h').value = '';
@@ -1617,7 +1627,6 @@ function editSleepLog(date) {
   const log = sleepLogs.find(s => s.date === date);
   if (!log) return;
   document.getElementById('sleep-date-input').value = log.date;
-  document.getElementById('sleep-score-input').value = log.score != null ? log.score : '';
   hoursToHmFields(log.hours, 'sleep-duration-h', 'sleep-duration-m');
   strToHmFields(log.bedtime, 'sleep-bedtime-h', 'sleep-bedtime-m');
   document.getElementById('sleep-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
@@ -1633,7 +1642,8 @@ function deleteSleepLog(date) {
 
 function renderSleepLogList() {
   const el = document.getElementById('sleep-log-list');
-  const sorted = [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+  const weekAgoStr = daysAgoStr(7);
+  const sorted = [...sleepLogs].filter(s => s.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) {
     el.innerHTML = '<div class="empty">まだ記録がありません</div>';
     return;
@@ -1654,13 +1664,11 @@ function renderSleep() {
   renderSleepLogList();
   const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date));
   if (sorted.length === 0) {
-    document.getElementById('sleep-score-latest').innerHTML = '-<span class="unit">点</span>';
     document.getElementById('sleep-hours-latest').textContent = '-';
     document.getElementById('sleep-bedtime-latest').textContent = '-';
     return;
   }
   const latest = sorted[sorted.length - 1];
-  document.getElementById('sleep-score-latest').innerHTML = (latest.score != null ? latest.score : '-') + '<span class="unit">点</span>';
   document.getElementById('sleep-hours-latest').textContent = formatHm(latest.hours);
   document.getElementById('sleep-bedtime-latest').textContent = latest.bedtime || '-';
 }
@@ -1849,14 +1857,13 @@ function bodyDualChartSvg(logs) {
 }
 
 function sleepDualChartSvg(logs) {
-  logs = logs.filter(l => l.score != null || l.hours != null);
+  logs = logs.filter(l => l.hours != null);
   if (logs.length === 0) return '<div class="empty">データがありません</div>';
   bodyChartInstanceCounter++;
-  const gradId = 'sleepScoreGrad' + bodyChartInstanceCounter;
-  const w = 360, h = 210, padL = 52, padR = 52, padT = 24, padB = 34;
+  const gradId = 'sleepHoursGrad' + bodyChartInstanceCounter;
+  const w = 360, h = 210, padL = 40, padR = 20, padT = 24, padB = 34;
   const plotH = h - padT - padB;
-  const scores = logs.filter(l => l.score != null).map(l => l.score);
-  const hoursList = logs.filter(l => l.hours != null).map(l => l.hours);
+  const hoursList = logs.map(l => l.hours);
 
   function paddedRange(min, max) {
     if (min === max) { min -= 1; max += 1; }
@@ -1870,27 +1877,15 @@ function sleepDualChartSvg(logs) {
   }
 
   let grid = '';
-  let sLo = 0, sHi = 100;
-  if (scores.length > 0) [sLo, sHi] = paddedRange(Math.min(...scores), Math.max(...scores));
-  const sy = v => padT + plotH * (1 - (v - sLo) / (sHi - sLo));
-  let hLo = 0, hHi = 0;
-  if (hoursList.length > 0) [hLo, hHi] = paddedRange(Math.min(...hoursList), Math.max(...hoursList));
+  const [hLo, hHi] = paddedRange(Math.min(...hoursList), Math.max(...hoursList));
+  const hy = v => padT + plotH * (1 - (v - hLo) / (hHi - hLo));
 
-  if (scores.length > 0) {
-    [0, 0.5, 1].forEach(t => {
-      const y = padT + plotH * t;
-      const sVal = round1(sHi - (sHi - sLo) * t);
-      grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
-      grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + sVal + '</text>';
-    });
-  }
-  if (hoursList.length > 0) {
-    [0, 0.5, 1].forEach(t => {
-      const y = padT + plotH * t;
-      const hVal = round1(hHi - (hHi - hLo) * t);
-      grid += '<text x="' + (w - padR + 8) + '" y="' + (y + 4) + '" text-anchor="start" font-size="12" font-weight="600" fill="var(--text-muted)">' + hVal + '</text>';
-    });
-  }
+  [0, 0.5, 1].forEach(t => {
+    const y = padT + plotH * t;
+    const hVal = round1(hHi - (hHi - hLo) * t);
+    grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + hVal + '</text>';
+  });
 
   const first = logs[0], lastLog = logs[logs.length - 1];
   grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
@@ -1899,56 +1894,33 @@ function sleepDualChartSvg(logs) {
   }
 
   const showDots = logs.length <= 20;
-  let scorePart = '', lastScoreVal = null;
-  if (scores.length > 0) {
-    const scoreCoords = logs.map((l, i) => l.score == null ? null : { x: padL + step * i, y: sy(l.score) }).filter(Boolean);
-    const scoreLinePath = smoothPath(scoreCoords);
-    const lastS = scoreCoords[scoreCoords.length - 1];
-    lastScoreVal = [...logs].reverse().find(l => l.score != null).score;
-    const scoreAreaPath = scoreLinePath +
-      ' L' + scoreCoords[scoreCoords.length - 1].x + ',' + (h - padB) +
-      ' L' + scoreCoords[0].x + ',' + (h - padB) + ' Z';
-    const scoreDots = showDots ? scoreCoords.slice(0, -1).map(c =>
-      '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--blue-text)" stroke="var(--card)" stroke-width="1.5"/>'
-    ).join('') : '';
-    scorePart = '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0%" stop-color="var(--blue-text)" stop-opacity="0.22"/>' +
-      '<stop offset="100%" stop-color="var(--blue-text)" stop-opacity="0"/>' +
-      '</linearGradient></defs>' +
-      '<path d="' + scoreAreaPath + '" fill="url(#' + gradId + ')" stroke="none"/>' +
-      '<path d="' + scoreLinePath + '" fill="none" stroke="var(--blue-text)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-      scoreDots +
-      '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="6" fill="var(--blue-text)" fill-opacity="0.18"/>' +
-      '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="4" fill="var(--blue-text)" stroke="var(--card)" stroke-width="2"/>';
-  }
-
-  let hoursPart = '', lastHoursVal = null;
-  if (hoursList.length > 0) {
-    const hy = v => padT + plotH * (1 - (v - hLo) / (hHi - hLo));
-    const hoursCoords = logs.map((l, i) => l.hours == null ? null : { x: padL + step * i, y: hy(l.hours) }).filter(Boolean);
-    const hoursLinePath = smoothPath(hoursCoords);
-    const lastH = hoursCoords[hoursCoords.length - 1];
-    lastHoursVal = [...logs].reverse().find(l => l.hours != null).hours;
-    const hoursDots = showDots ? hoursCoords.slice(0, -1).map(c =>
-      '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--amber)" stroke="var(--card)" stroke-width="1.5"/>'
-    ).join('') : '';
-    hoursPart = '<path d="' + hoursLinePath + '" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 6"/>' +
-      hoursDots +
-      '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="6" fill="var(--amber)" fill-opacity="0.18"/>' +
-      '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="4" fill="var(--amber)" stroke="var(--card)" stroke-width="2"/>';
-  }
+  const hoursCoords = logs.map((l, i) => ({ x: padL + step * i, y: hy(l.hours) }));
+  const hoursLinePath = smoothPath(hoursCoords);
+  const lastH = hoursCoords[hoursCoords.length - 1];
+  const lastHoursVal = lastLog.hours;
+  const hoursAreaPath = hoursLinePath +
+    ' L' + hoursCoords[hoursCoords.length - 1].x + ',' + (h - padB) +
+    ' L' + hoursCoords[0].x + ',' + (h - padB) + ' Z';
+  const hoursDots = showDots ? hoursCoords.slice(0, -1).map(c =>
+    '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--amber)" stroke="var(--card)" stroke-width="1.5"/>'
+  ).join('') : '';
+  const hoursPart = '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="var(--amber)" stop-opacity="0.22"/>' +
+    '<stop offset="100%" stop-color="var(--amber)" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
+    '<path d="' + hoursAreaPath + '" fill="url(#' + gradId + ')" stroke="none"/>' +
+    '<path d="' + hoursLinePath + '" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    hoursDots +
+    '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="6" fill="var(--amber)" fill-opacity="0.18"/>' +
+    '<circle cx="' + lastH.x + '" cy="' + lastH.y + '" r="4" fill="var(--amber)" stroke="var(--card)" stroke-width="2"/>';
 
   return '<div style="display:flex;gap:16px;font-size:14px;font-weight:700;margin-bottom:8px;">' +
     '<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);white-space:nowrap;">' +
-      '<span style="width:14px;height:3px;border-radius:2px;background:var(--blue-text);display:inline-block;"></span>' +
-      '睡眠スコア' + (lastScoreVal != null ? ' ' + lastScoreVal + '点' : '') + '（左）</span>' +
-    '<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);white-space:nowrap;">' +
-      '<span style="width:14px;height:0;border-top:3px dotted var(--amber);display:inline-block;"></span>' +
-      '睡眠時間' + (lastHoursVal != null ? ' ' + formatHm(lastHoursVal) : '') + '（右）</span>' +
+      '<span style="width:14px;height:3px;border-radius:2px;background:var(--amber);display:inline-block;"></span>' +
+      '睡眠時間' + (lastHoursVal != null ? ' ' + formatHm(lastHoursVal) : '') + '</span>' +
     '</div>' +
     '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
     grid +
-    scorePart +
     hoursPart +
     '</svg>';
 }
@@ -2002,7 +1974,8 @@ function renderPlanExFields(row, type, prefill) {
     fields.innerHTML = '<div class="row">' +
       '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="' + setCount + '">' +
       '<input type="number" step="1" class="plan-ex-duration" placeholder="目標時間(分)" value="' + (prefill && prefill.duration ? prefill.duration : '') + '">' +
-      '<input type="number" step="0.1" class="plan-ex-distance" placeholder="目標距離km" value="' + (prefill && prefill.distance ? prefill.distance : '') + '">' +
+      '<input type="number" step="0.1" class="plan-ex-speed" placeholder="目標スピードkm/h" value="' + (prefill && prefill.speed ? prefill.speed : '') + '">' +
+      '<input type="number" step="0.5" class="plan-ex-incline" placeholder="目標傾斜%" value="' + (prefill && prefill.incline ? prefill.incline : '') + '">' +
       '</div>';
   } else if (type === 'reps') {
     fields.innerHTML = '<div class="row">' +
@@ -2034,8 +2007,9 @@ function savePlan() {
     const setCount = parseInt(r.querySelector('.plan-ex-setcount').value, 10) || 1;
     if (type === 'cardio') {
       const duration = parseFloat(r.querySelector('.plan-ex-duration').value) || 0;
-      const distance = parseFloat(r.querySelector('.plan-ex-distance').value) || 0;
-      exercises.push({ name: exName, type, setCount, duration, distance });
+      const speed = parseFloat(r.querySelector('.plan-ex-speed').value) || 0;
+      const incline = parseFloat(r.querySelector('.plan-ex-incline').value) || 0;
+      exercises.push({ name: exName, type, setCount, duration, speed, incline });
     } else if (type === 'reps') {
       const reps = parseInt(r.querySelector('.plan-ex-reps').value, 10) || 0;
       exercises.push({ name: exName, type, setCount, reps });
@@ -2212,7 +2186,7 @@ function startPlan(id, selectedIndexes, scheduleDate) {
     const type = ex.type || 'strength';
     for (let i = 0; i < ex.setCount; i++) {
       if (type === 'cardio') {
-        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, duration: ex.duration, distance: ex.distance });
+        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, duration: ex.duration, speed: ex.speed, incline: ex.incline });
       } else if (type === 'reps') {
         queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, reps: ex.reps });
       } else {
@@ -2281,10 +2255,11 @@ function renderPlanRun() {
 
   let targetText, actualFieldsHtml;
   if (cur.type === 'cardio') {
-    targetText = cur.duration ? ' ・ 目標 ' + cur.duration + '分' + (cur.distance ? ' / ' + cur.distance + 'km' : '') : '';
+    targetText = cur.duration ? ' ・ 目標 ' + cur.duration + '分' + (cur.speed ? ' / ' + cur.speed + 'km/h' : '') + (cur.incline ? ' / 傾斜' + cur.incline + '%' : '') : '';
     actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
       '<input type="number" step="1" id="run-actual-1" placeholder="時間(分)" value="' + (cur.duration || '') + '">' +
-      '<input type="number" step="0.1" id="run-actual-2" placeholder="距離km(任意)" value="' + (cur.distance || '') + '">' +
+      '<input type="number" step="0.1" id="run-actual-2" placeholder="スピードkm/h" value="' + (cur.speed || '') + '">' +
+      '<input type="number" step="0.5" id="run-actual-3" placeholder="傾斜%(任意)" value="' + (cur.incline || '') + '">' +
       '</div>';
   } else if (cur.type === 'reps') {
     targetText = cur.reps ? ' ・ 目標 ' + cur.reps + '回' : '';
@@ -2326,11 +2301,12 @@ function recordCurrentSet() {
   if (!cur) return;
   const a1 = parseFloat(document.getElementById('run-actual-1')?.value);
   const a2 = parseFloat(document.getElementById('run-actual-2')?.value);
+  const a3 = parseFloat(document.getElementById('run-actual-3')?.value);
   let set;
   if (cur.type === 'cardio') {
     const duration = !isNaN(a1) ? a1 : cur.duration;
     if (!duration) return;
-    set = { duration: duration, distance: !isNaN(a2) ? a2 : (cur.distance || null) };
+    set = { duration: duration, speed: !isNaN(a2) ? a2 : (cur.speed || null), incline: !isNaN(a3) ? a3 : (cur.incline || null) };
   } else if (cur.type === 'reps') {
     const reps = !isNaN(a1) ? a1 : cur.reps;
     if (!reps) return;
