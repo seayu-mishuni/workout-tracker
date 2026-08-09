@@ -821,8 +821,17 @@ function populateExTitleSelect(selectedName) {
 }
 
 function openAddExercise(date) {
+  const targetDate = date || todayStr();
+  if (targetDate === todayStr() && !activeRun) {
+    const s = scheduledPlans.find(x => x.date === targetDate && !x.completed);
+    const plan = s ? plans.find(p => p.id === s.planId) : null;
+    if (plan && confirm('今日は「' + plan.name + '」の予定があります。プランを開始しますか？')) {
+      openStartPlanModal(plan.id, s.date);
+      return;
+    }
+  }
   editingLogId = null;
-  exTargetDate = date || todayStr();
+  exTargetDate = targetDate;
   populateExTitleSelect();
   document.querySelector('#modal-add-exercise h3').textContent =
     exTargetDate === todayStr() ? '種目を追加' : '種目を追加（' + fmtDateLabel(exTargetDate) + '）';
@@ -1111,10 +1120,8 @@ function renderTodayPlanCard() {
     return;
   }
   el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p>' +
-    '<p style="font-weight:600;font-size:18px;margin:0 0 ' + (s.completed ? '10px' : '10px') + ';">' + escapeHtml(plan.name) + '</p>' +
-    (s.completed
-      ? '<span class="badge" style="display:inline-block;">実施済</span>'
-      : '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\', \'' + s.date + '\')">開始</button>');
+    '<p style="font-weight:600;font-size:18px;margin:0;">' + escapeHtml(plan.name) + '</p>' +
+    (s.completed ? '<span class="badge" style="display:inline-block;margin-top:10px;">実施済</span>' : '');
 }
 
 function renderResultsSummary() {
