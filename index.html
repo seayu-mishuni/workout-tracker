@@ -1112,20 +1112,29 @@ function renderTrainingResults() {
 
 function renderTodayPlanCard() {
   const el = document.getElementById('today-plan-card');
-  const today = todayStr();
-  const s = scheduledPlans.find(x => x.date === today);
-  const plan = s ? plans.find(p => p.id === s.planId) : null;
-  if (!plan) {
-    el.style.border = '';
-    el.innerHTML = '<p class="field-label" style="margin-bottom:8px;">今日の予定</p><div class="empty">予定はありません</div>';
-    return;
-  }
-  el.style.border = '2px solid var(--accent)';
-  const chips = plan.exercises.map(e => '<span class="mini-chip">' + escapeHtml(e.name) + '</span>').join('');
+  const entries = [
+    { label: '今日', date: todayStr() },
+    { label: '明日', date: daysAgoStr(-1) }
+  ].map(d => {
+    const s = scheduledPlans.find(x => x.date === d.date);
+    const plan = s ? plans.find(p => p.id === s.planId) : null;
+    return { label: d.label, s, plan };
+  });
+  el.style.border = entries.some(e => e.plan) ? '2px solid var(--accent)' : '';
   el.innerHTML =
-    '<p class="field-label" style="margin-bottom:10px;">📅 今日の予定' + (s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
-    '<p style="font-weight:800;font-size:21px;margin:0 0 10px;">' + escapeHtml(plan.name) + '</p>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>';
+    '<p class="field-label" style="margin-bottom:10px;">📅 今日・明日の予定</p>' +
+    entries.map((e, i) => {
+      const last = i === entries.length - 1;
+      if (!e.plan) {
+        return '<p style="font-size:15px;color:var(--text-muted);margin:0 0 ' + (last ? '0' : '12px') + ';">' + e.label + '：予定はありません</p>';
+      }
+      const chips = e.plan.exercises.map(ex => '<span class="mini-chip">' + escapeHtml(ex.name) + '</span>').join('');
+      return '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
+        '<p style="font-size:14px;color:var(--text-muted);font-weight:700;margin:0 0 4px;">' + e.label + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
+        '<p style="font-weight:800;font-size:19px;margin:0 0 8px;">' + escapeHtml(e.plan.name) + '</p>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>' +
+        '</div>';
+    }).join('');
 }
 
 function renderResultsSummary() {
