@@ -1129,10 +1129,22 @@ function renderTodayPlanCard() {
         return '<p style="font-size:15px;color:var(--text-muted);margin:0 0 ' + (last ? '0' : '12px') + ';">' + e.label + '：予定はありません</p>';
       }
       const chips = e.plan.exercises.map(ex => '<span class="mini-chip">' + escapeHtml(ex.name) + '</span>').join('');
+      const isRunning = i === 0 && activeRun && activeRun.scheduleDate === e.s.date;
+      const showCheckin = i === 0 && !e.s.completed && !activeRun;
+      const showCheckout = isRunning;
+      let footer = '';
+      if (showCheckin) {
+        footer = '<button class="primary" onclick="openStartPlanModal(\'' + e.plan.id + '\', \'' + e.s.date + '\')">🏋 チェックイン</button>';
+      } else if (showCheckout) {
+        const elapsedMin = Math.round((Date.now() - activeRun.startedAt) / 60000);
+        footer = '<p style="margin:0 0 8px;"><span class="mini-chip c-green">🏃 トレ中 ・ 経過' + elapsedMin + '分</span></p>' +
+          '<button class="primary" onclick="checkoutPlan()">🚪 チェックアウト</button>';
+      }
       return '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
         '<p style="font-size:14px;color:var(--text-muted);font-weight:700;margin:0 0 4px;">' + e.label + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
         '<p style="font-weight:800;font-size:19px;margin:0 0 8px;">' + escapeHtml(e.plan.name) + '</p>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:' + (footer ? '10px' : '0') + ';">' + chips + '</div>' +
+        footer +
         '</div>';
     }).join('');
 }
@@ -2195,6 +2207,7 @@ function confirmStartPlan() {
   if (selected.length === 0) { alert('種目を1つ以上選択してください'); return; }
   closeModal('modal-start-plan');
   startPlan(startPlanTargetId, selected, startPlanTargetScheduleDate);
+  showScreen('plan');
 }
 
 function startPlan(id, selectedIndexes, scheduleDate) {
@@ -2243,7 +2256,7 @@ function renderPlanRun() {
 
   if (activeRun.currentIndex === -1) {
     view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;margin-bottom:14px;">プラン完了 🎉</p>' +
-      '<button class="primary" onclick="completePlanRun()">終了する</button></div>' +
+      '<button class="primary" onclick="showScreen(\'progress\')">✅ プラン終了</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
   }
@@ -2266,6 +2279,7 @@ function renderPlanRun() {
       }).join('') +
       '</div>' +
       '<div class="card">' + queueListHtml + '</div>' +
+      '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
       '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
     renderRestBar();
     return;
@@ -2312,6 +2326,7 @@ function renderPlanRun() {
     '<button class="primary" onclick="nextSet()">次のセット</button>' +
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
+    '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
   renderRestBar();
 }
@@ -2344,8 +2359,6 @@ function recordCurrentSet() {
     workoutLogs.push(entry);
   }
   entry.sets.push(set);
-  // 終了ボタンを押し忘れても実際のトレ時間が出せるように、最後に記録した時刻を残す
-  activeRun.lastSetAt = Date.now();
   saveWorkoutLogs();
 }
 
@@ -2382,9 +2395,8 @@ function chooseNextExercise(queueIndex) {
 }
 
 function completePlanRun() {
-  // 終了時刻は「最後にセットを記録した時刻」。終了ボタンを押し忘れて放置しても実時間に近い値になる
-  const endedAt = activeRun.lastSetAt || Date.now();
-  let durationMin = Math.max(1, Math.round((endedAt - activeRun.startedAt) / 60000));
+  // チェックインから終了ボタンを押すまでの滞在時間として記録する
+  let durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
   const MAX_DURATION_MIN = 300;
   if (durationMin > MAX_DURATION_MIN) {
     alert('開始から' + durationMin + '分経過していたため、記録時間を' + MAX_DURATION_MIN + '分として保存します。\n実際と違う場合は「トレ平均時間」から削除できます。');
@@ -2399,11 +2411,18 @@ function completePlanRun() {
   finishPlan();
 }
 
+// 全セットを消化していなくても、その時点までの滞在時間として記録して終了する
+function checkoutPlan() {
+  const remaining = activeRun.queue.length - activeRun.doneIndices.length;
+  if (remaining > 0 && !confirm('残り' + remaining + 'セットが未実施です。ここでチェックアウトしますか？')) return;
+  completePlanRun();
+}
+
 function finishPlan() {
   stopRest();
   activeRun = null;
   saveActiveRun();
-  renderPlanScreen();
+  showScreen('progress');
 }
 
 function quitPlan() {
