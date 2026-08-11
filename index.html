@@ -1168,7 +1168,6 @@ function renderTodayPlanCard() {
         return divider + '<p style="margin:0 0 ' + (last ? '0' : '12px') + ';">' + dayChip +
           '<span style="font-size:15px;color:var(--text-muted);margin-left:8px;">予定はありません</span></p>';
       }
-      const chips = e.plan.exercises.map(ex => '<span class="mini-chip">' + escapeHtml(ex.name) + '</span>').join('');
       const isRunning = i === 0 && activeRun && activeRun.scheduleDate === e.s.date;
       const showCheckin = i === 0 && !e.s.completed && !activeRun;
       const showCheckout = isRunning;
@@ -1183,8 +1182,7 @@ function renderTodayPlanCard() {
       return divider +
         '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
         '<p style="margin:0 0 8px;">' + dayChip + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
-        '<p style="font-weight:800;font-size:19px;margin:0 0 8px;">' + escapeHtml(e.plan.name) + '</p>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:' + (footer ? '10px' : '0') + ';">' + chips + '</div>' +
+        '<p style="font-weight:800;font-size:19px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' + escapeHtml(e.plan.name) + '</p>' +
         footer +
         '</div>';
     }).join('');
