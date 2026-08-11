@@ -7,62 +7,62 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ワークアウト">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0f0d" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0f0d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 <title>ワークアウト管理</title>
 <style>
   :root {
-    --bg: #faf7f2;
-    --card: #ffffff;
-    --border: #ddd5c4;
-    --border-strong: #c2b7a0;
-    --text: #17140f;
-    --text-secondary: #46403a;
-    --text-muted: #736c60;
-    --accent: #5fc22d;
-    --accent-on: #ffffff;
-    --accent-bg: #e3f5d8;
-    --accent-text: #3a7d1a;
-    --green: #17a673;
-    --green-bg: #ddf5ea;
-    --green-text: #0a6b47;
-    --purple: #7c5cff;
-    --coral: #d85a30;
-    --amber: #ba7517;
-    --amber-bg: #faeeda;
-    --blue-bg: #dcefff;
-    --blue-text: #0a5bab;
-    --purple-bg: #ece6ff;
-    --purple-text: #5b3fd6;
+    --bg: #0b0f0d;
+    --card: #151b17;
+    --border: #26312b;
+    --border-strong: #3a4a3f;
+    --text: #eafbea;
+    --text-secondary: #b7c9ba;
+    --text-muted: #7d9184;
+    --accent: #39ff6a;
+    --accent-on: #06170b;
+    --accent-bg: #163a1f;
+    --accent-text: #7dffa0;
+    --green: #00e0a0;
+    --green-bg: #0e3327;
+    --green-text: #6ffcd0;
+    --purple: #b388ff;
+    --coral: #ff5c72;
+    --amber: #ffd23f;
+    --amber-bg: #3a2f0a;
+    --blue-bg: #0f2a3a;
+    --blue-text: #6fd0ff;
+    --purple-bg: #23183a;
+    --purple-text: #caa8ff;
     --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #17161b;
-      --card: #242229;
-      --border: #37343c;
-      --border-strong: #4a4650;
-      --text: #fbf9f5;
-      --text-secondary: #c2bcb0;
-      --text-muted: #9c9587;
-      --accent: #7ed94a;
-      --accent-on: #10230a;
-      --accent-bg: #223a16;
-      --accent-text: #a8ef82;
-      --green: #4ed6a3;
-      --green-bg: #0e3d2d;
-      --green-text: #8fe8c4;
-      --purple: #a693ff;
-      --coral: #f0997b;
-      --amber: #f0997b;
-      --amber-bg: #412402;
-      --blue-bg: #0d3457;
-      --blue-text: #8ec4f7;
-      --purple-bg: #2e2657;
-      --purple-text: #cabfff;
+      --bg: #0b0f0d;
+      --card: #151b17;
+      --border: #26312b;
+      --border-strong: #3a4a3f;
+      --text: #eafbea;
+      --text-secondary: #b7c9ba;
+      --text-muted: #7d9184;
+      --accent: #39ff6a;
+      --accent-on: #06170b;
+      --accent-bg: #163a1f;
+      --accent-text: #7dffa0;
+      --green: #00e0a0;
+      --green-bg: #0e3327;
+      --green-text: #6ffcd0;
+      --purple: #b388ff;
+      --coral: #ff5c72;
+      --amber: #ffd23f;
+      --amber-bg: #3a2f0a;
+      --blue-bg: #0f2a3a;
+      --blue-text: #6fd0ff;
+      --purple-bg: #23183a;
+      --purple-text: #caa8ff;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -133,11 +133,11 @@
   .exercise-card {
     border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 13px 15px; margin-bottom: 10px;
   }
-  .exercise-card .head { display: flex; justify-content: space-between; align-items: center; }
-  .exercise-card .name { font-size: 19px; font-weight: 800; }
+  .exercise-card .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .exercise-card .name { font-size: 19px; font-weight: 800; flex: 1; min-width: 0; overflow-wrap: break-word; }
   .badge {
     font-size: 14px; font-weight: 700; background: var(--green-bg); color: var(--green-text);
-    padding: 4px 12px; border-radius: 10px; white-space: nowrap;
+    padding: 4px 12px; border-radius: 10px; white-space: nowrap; flex-shrink: 0;
   }
   .badge-cardio { background: var(--blue-bg); color: var(--blue-text); }
   .badge-reps { background: var(--purple-bg); color: var(--purple-text); }
@@ -251,7 +251,7 @@
       <div class="card">
         <div class="row">
           <div class="stat"><p>総ボリューム</p><p id="rec-volume">0<span class="unit">kg</span></p></div>
-          <div class="stat"><p>セット数</p><p id="rec-sets">0</p></div>
+          <div class="stat"><p>セット数</p><p id="rec-sets">0</p><p id="rec-sets-note" style="font-size:13px;color:var(--text-muted);font-weight:600;white-space:normal;margin:2px 0 0;"></p></div>
         </div>
       </div>
       <div id="rec-list"></div>
@@ -282,6 +282,9 @@
           <div class="stat"><p>総レップ数</p><p id="res-total-reps">0<span class="unit">回</span></p></div>
           <div class="stat"><p>前月比</p><p id="res-vs-last-month">-</p></div>
         </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="stat"><p>🚶 平均歩数(1日)</p><p id="res-avg-steps">-</p></div>
+        </div>
       </div>
 
       <div class="card">
@@ -310,6 +313,14 @@
           <div class="stat"><p>直近の就寝時間</p><p id="res-sleep-latest-bedtime">-</p></div>
         </div>
         <div id="res-sleep-chart"></div>
+      </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">🚶 歩数の推移</p>
+        <div class="row" style="margin-bottom:10px;">
+          <div class="stat"><p>平均歩数(1ヶ月)</p><p id="res-steps-avg">-</p></div>
+        </div>
+        <div id="res-steps-chart"></div>
       </div>
 
       <div class="card">
@@ -393,6 +404,26 @@
         <details>
           <summary class="field-label" style="cursor:pointer;">睡眠記録の履歴</summary>
           <div id="sleep-log-list" style="margin-top:8px;"></div>
+        </details>
+      </div>
+
+      <p class="field-label" style="margin:20px 0 12px;">🚶 歩数（iPhoneのヘルスアプリの値を入力）</p>
+      <div class="card">
+        <label class="field-label">記録を入力</label>
+        <input type="date" id="step-date-input" style="margin-bottom:8px;">
+        <div class="row" style="margin-bottom:8px;">
+          <input type="number" step="1" min="0" id="step-count-input" placeholder="歩数">
+        </div>
+        <button class="primary" onclick="saveStepLog()">保存</button>
+        <p id="step-input-note" style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">同じ日付の記録があれば上書きされます。</p>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="stat"><p>歩数</p><p id="step-count-latest">-</p></div>
+      </div>
+      <div class="card">
+        <details>
+          <summary class="field-label" style="cursor:pointer;">歩数記録の履歴</summary>
+          <div id="step-log-list" style="margin-top:8px;"></div>
         </details>
       </div>
     </section>
@@ -640,6 +671,7 @@ const DEFAULT_PLANS = [
 let workoutLogs = store.get('workoutLogs', []);
 let bodyLogs = store.get('bodyLogs', []);
 let sleepLogs = store.get('sleepLogs', []);
+let stepLogs = store.get('stepLogs', []);
 let plans = store.get('plans', null);
 if (!plans) {
   plans = DEFAULT_PLANS.map(p => ({ id: uid(), name: p.name, exercises: p.exercises }));
@@ -673,6 +705,7 @@ if (!machines) {
 function saveWorkoutLogs() { store.set('workoutLogs', workoutLogs); }
 function saveBodyLogs() { store.set('bodyLogs', bodyLogs); }
 function saveSleepLogs() { store.set('sleepLogs', sleepLogs); }
+function saveStepLogs() { store.set('stepLogs', stepLogs); }
 function savePlans() { store.set('plans', plans); }
 function saveActiveRun() { store.set('activeRun', activeRun); }
 function saveMachines() { store.set('machines', machines); }
@@ -773,7 +806,8 @@ function renderRecord() {
   const notes = [];
   if (totalCardioMin) notes.push('有酸素' + totalCardioMin + '分');
   if (totalReps) notes.push('自重' + totalReps + '回');
-  document.getElementById('rec-sets').textContent = totalSets + (notes.length ? ' (' + notes.join(', ') + ')' : '');
+  document.getElementById('rec-sets').textContent = totalSets;
+  document.getElementById('rec-sets-note').textContent = notes.join(' / ');
   document.getElementById('rec-list').innerHTML = logs.length === 0
     ? '<div class="empty">記録がまだありません</div>'
     : exerciseCardsHtml(logs);
@@ -1108,6 +1142,7 @@ function renderTrainingResults() {
   renderExTrend();
   renderResultsBodyChart();
   renderResultsSleepChart();
+  renderResultsStepsChart();
 }
 
 function renderTodayPlanCard() {
@@ -1125,8 +1160,13 @@ function renderTodayPlanCard() {
     '<p class="field-label" style="margin-bottom:10px;">📅 今日・明日の予定</p>' +
     entries.map((e, i) => {
       const last = i === entries.length - 1;
+      const divider = i === 1 ? '<hr style="border:none;border-top:1px solid var(--border);margin:0 0 12px;">' : '';
+      const dayChip = i === 0
+        ? '<span class="mini-chip c-green" style="font-size:13px;">🔵 今日</span>'
+        : '<span class="mini-chip" style="font-size:13px;">🔷 明日</span>';
       if (!e.plan) {
-        return '<p style="font-size:15px;color:var(--text-muted);margin:0 0 ' + (last ? '0' : '12px') + ';">' + e.label + '：予定はありません</p>';
+        return divider + '<p style="margin:0 0 ' + (last ? '0' : '12px') + ';">' + dayChip +
+          '<span style="font-size:15px;color:var(--text-muted);margin-left:8px;">予定はありません</span></p>';
       }
       const chips = e.plan.exercises.map(ex => '<span class="mini-chip">' + escapeHtml(ex.name) + '</span>').join('');
       const isRunning = i === 0 && activeRun && activeRun.scheduleDate === e.s.date;
@@ -1140,8 +1180,9 @@ function renderTodayPlanCard() {
         footer = '<p style="margin:0 0 8px;"><span class="mini-chip c-green">🏃 トレ中 ・ 経過' + elapsedMin + '分</span></p>' +
           '<button class="primary" onclick="checkoutPlan()">🚪 チェックアウト</button>';
       }
-      return '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
-        '<p style="font-size:14px;color:var(--text-muted);font-weight:700;margin:0 0 4px;">' + e.label + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
+      return divider +
+        '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
+        '<p style="margin:0 0 8px;">' + dayChip + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
         '<p style="font-weight:800;font-size:19px;margin:0 0 8px;">' + escapeHtml(e.plan.name) + '</p>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:' + (footer ? '10px' : '0') + ';">' + chips + '</div>' +
         footer +
@@ -1172,6 +1213,15 @@ function renderResultsSummary() {
   document.getElementById('res-total-sets').innerHTML = formatInt(totalSets) + '<span class="unit">セット</span>';
   document.getElementById('res-total-reps').innerHTML = formatInt(totalReps) + '<span class="unit">回</span>';
   document.getElementById('res-calories').innerHTML = formatInt(estimateCalories(logsThisMonth, refDate)) + '<span class="unit">kcal</span>';
+
+  const stepLogsThisMonth = stepLogs.filter(s => monthKey(s.date) === thisMonth);
+  const avgStepsEl = document.getElementById('res-avg-steps');
+  if (stepLogsThisMonth.length > 0) {
+    const avgSteps = Math.round(stepLogsThisMonth.reduce((s, x) => s + x.steps, 0) / stepLogsThisMonth.length);
+    avgStepsEl.innerHTML = formatInt(avgSteps) + '<span class="unit">歩</span>';
+  } else {
+    avgStepsEl.textContent = '-';
+  }
 
   const lastMonth = shiftMonthKey(thisMonth, -1);
   const lastMonthVolume = monthlyVolume(lastMonth);
@@ -1526,6 +1576,19 @@ function renderResultsSleepChart() {
   document.getElementById('res-sleep-latest-bedtime').textContent = latestBedtime ? latestBedtime.bedtime : '-';
 }
 
+function renderResultsStepsChart() {
+  const sorted = [...stepLogs].sort((a, b) => a.date.localeCompare(b.date));
+  const cutoffStr = daysAgoStr(90);
+  const inRange = sorted.filter(s => s.date >= cutoffStr);
+  document.getElementById('res-steps-chart').innerHTML = stepsChartSvg(inRange);
+
+  const monthCutoffStr = daysAgoStr(30);
+  const monthLogs = sorted.filter(s => s.date >= monthCutoffStr);
+  const stepsVals = monthLogs.map(s => s.steps);
+  const avgSteps = stepsVals.length ? Math.round(stepsVals.reduce((a, b) => a + b, 0) / stepsVals.length) : null;
+  document.getElementById('res-steps-avg').textContent = avgSteps != null ? formatInt(avgSteps) + '歩' : '-';
+}
+
 /* ---------- からだ ---------- */
 
 function saveBodyLog() {
@@ -1705,6 +1768,65 @@ function renderSleep() {
   document.getElementById('sleep-bedtime-latest').textContent = latest.bedtime || '-';
 }
 
+function saveStepLog() {
+  const steps = parseInt(document.getElementById('step-count-input').value, 10);
+  if (isNaN(steps)) { alert('歩数を入力してください'); return; }
+  const dateInput = document.getElementById('step-date-input');
+  const t = dateInput.value || todayStr();
+  const existing = stepLogs.find(s => s.date === t);
+  if (existing) existing.steps = steps;
+  else stepLogs.push({ date: t, steps: steps });
+  saveStepLogs();
+  document.getElementById('step-count-input').value = '';
+  dateInput.value = todayStr();
+  document.getElementById('step-input-note').textContent = '同じ日付の記録があれば上書きされます。';
+  renderSteps();
+}
+
+// 過去の記録を入力欄に読み込んで修正できるようにする
+function editStepLog(date) {
+  const log = stepLogs.find(s => s.date === date);
+  if (!log) return;
+  document.getElementById('step-date-input').value = log.date;
+  document.getElementById('step-count-input').value = log.steps;
+  document.getElementById('step-input-note').textContent = fmtDateLabel(log.date) + 'の記録を編集中です。保存すると上書きされます。';
+  document.getElementById('step-date-input').scrollIntoView({ block: 'center' });
+}
+
+function deleteStepLog(date) {
+  if (!confirm(fmtDateLabel(date) + 'の歩数記録を削除しますか？')) return;
+  stepLogs = stepLogs.filter(s => s.date !== date);
+  saveStepLogs();
+  renderSteps();
+}
+
+function renderStepLogList() {
+  const el = document.getElementById('step-log-list');
+  const weekAgoStr = daysAgoStr(7);
+  const sorted = [...stepLogs].filter(s => s.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(s =>
+    '<div class="list-item">' +
+    '<div class="lt"><p>' + fmtDateLabel(s.date) + '</p>' +
+    '<p>' + formatInt(s.steps) + '歩</p></div>' +
+    '<span style="color:var(--text-secondary);font-size:15px;font-weight:700;cursor:pointer;" onclick="editStepLog(\'' + s.date + '\')">編集</span>' +
+    '<span style="color:var(--coral);font-size:15px;font-weight:700;cursor:pointer;" onclick="deleteStepLog(\'' + s.date + '\')">削除</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderSteps() {
+  const dateInput = document.getElementById('step-date-input');
+  if (!dateInput.value) dateInput.value = todayStr();
+  renderStepLogList();
+  const sorted = [...stepLogs].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = sorted[sorted.length - 1];
+  document.getElementById('step-count-latest').textContent = latest ? formatInt(latest.steps) + '歩' : '-';
+}
+
 function renderBody() {
   const dateInput = document.getElementById('body-date-input');
   if (!dateInput.value) dateInput.value = todayStr();
@@ -1718,6 +1840,7 @@ function renderBody() {
     document.getElementById('body-month-diff').textContent = '-';
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
     renderSleep();
+    renderSteps();
     return;
   }
   const latest = sorted[sorted.length - 1];
@@ -1749,6 +1872,7 @@ function renderBody() {
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
   }
   renderSleep();
+  renderSteps();
 }
 
 function smoothPath(points) {
@@ -1954,6 +2078,75 @@ function sleepDualChartSvg(logs) {
     '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
     grid +
     hoursPart +
+    '</svg>';
+}
+
+function stepsChartSvg(logs) {
+  logs = logs.filter(l => l.steps != null);
+  if (logs.length === 0) return '<div class="empty">データがありません</div>';
+  bodyChartInstanceCounter++;
+  const gradId = 'stepsGrad' + bodyChartInstanceCounter;
+  const w = 360, h = 210, padL = 40, padR = 20, padT = 24, padB = 34;
+  const plotH = h - padT - padB;
+  const stepsList = logs.map(l => l.steps);
+
+  function paddedRange(min, max) {
+    if (min === max) { min -= 1; max += 1; }
+    const pad = (max - min) * 0.2;
+    return [min - pad, max + pad];
+  }
+  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+
+  function mdLabel(dateStr) {
+    return parseInt(dateStr.slice(5, 7), 10) + '/' + parseInt(dateStr.slice(8, 10), 10);
+  }
+
+  let grid = '';
+  const [sLo, sHi] = paddedRange(Math.min(0, ...stepsList), Math.max(...stepsList));
+  const sy = v => padT + plotH * (1 - (v - sLo) / (sHi - sLo));
+
+  [0, 0.5, 1].forEach(t => {
+    const y = padT + plotH * t;
+    const sVal = Math.round(sHi - (sHi - sLo) * t);
+    grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + formatInt(sVal) + '</text>';
+  });
+
+  const first = logs[0], lastLog = logs[logs.length - 1];
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
+  if (logs.length > 1) {
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
+  }
+
+  const showDots = logs.length <= 20;
+  const stepsCoords = logs.map((l, i) => ({ x: padL + step * i, y: sy(l.steps) }));
+  const stepsLinePath = smoothPath(stepsCoords);
+  const lastS = stepsCoords[stepsCoords.length - 1];
+  const lastStepsVal = lastLog.steps;
+  const stepsAreaPath = stepsLinePath +
+    ' L' + stepsCoords[stepsCoords.length - 1].x + ',' + (h - padB) +
+    ' L' + stepsCoords[0].x + ',' + (h - padB) + ' Z';
+  const stepsDots = showDots ? stepsCoords.slice(0, -1).map(c =>
+    '<circle cx="' + c.x + '" cy="' + c.y + '" r="3" fill="var(--blue-text)" stroke="var(--card)" stroke-width="1.5"/>'
+  ).join('') : '';
+  const stepsPart = '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="var(--blue-text)" stop-opacity="0.22"/>' +
+    '<stop offset="100%" stop-color="var(--blue-text)" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
+    '<path d="' + stepsAreaPath + '" fill="url(#' + gradId + ')" stroke="none"/>' +
+    '<path d="' + stepsLinePath + '" fill="none" stroke="var(--blue-text)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    stepsDots +
+    '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="6" fill="var(--blue-text)" fill-opacity="0.18"/>' +
+    '<circle cx="' + lastS.x + '" cy="' + lastS.y + '" r="4" fill="var(--blue-text)" stroke="var(--card)" stroke-width="2"/>';
+
+  return '<div style="display:flex;gap:16px;font-size:14px;font-weight:700;margin-bottom:8px;">' +
+    '<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);white-space:nowrap;">' +
+      '<span style="width:14px;height:3px;border-radius:2px;background:var(--blue-text);display:inline-block;"></span>' +
+      '歩数' + (lastStepsVal != null ? ' ' + formatInt(lastStepsVal) + '歩' : '') + '</span>' +
+    '</div>' +
+    '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
+    grid +
+    stepsPart +
     '</svg>';
 }
 
@@ -2638,6 +2831,7 @@ function openSettings() {
     rowLine('ワークアウト記録', workoutLogs.length + '件') +
     rowLine('体重・体脂肪率', bodyLogs.length + '件') +
     rowLine('睡眠記録', sleepLogs.length + '件') +
+    rowLine('歩数記録', stepLogs.length + '件') +
     rowLine('トレーニングプラン', plans.length + '件') +
     rowLine('登録マシン', machines.length + '件') +
     rowLine('トレ時間履歴', planHistory.length + '件') +
@@ -2652,7 +2846,7 @@ function rowLine(label, value) {
 function exportData() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    workoutLogs, bodyLogs, sleepLogs, plans, machines, scheduledPlans, planHistory
+    workoutLogs, bodyLogs, sleepLogs, stepLogs, plans, machines, scheduledPlans, planHistory
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2681,6 +2875,8 @@ function importData(event) {
         data.bodyLogs.forEach(b => { if (!existingBodyDates.has(b.date)) bodyLogs.push(b); });
         const existingSleepDates = new Set(sleepLogs.map(s => s.date));
         (data.sleepLogs || []).forEach(s => { if (!existingSleepDates.has(s.date)) sleepLogs.push(s); });
+        const existingStepDates = new Set(stepLogs.map(s => s.date));
+        (data.stepLogs || []).forEach(s => { if (!existingStepDates.has(s.date)) stepLogs.push(s); });
         const existingPlanIds = new Set(plans.map(p => p.id));
         data.plans.forEach(p => { if (!existingPlanIds.has(p.id)) plans.push(p); });
         const existingMachineNames = new Set(machines.map(m => m.name));
@@ -2693,13 +2889,14 @@ function importData(event) {
         workoutLogs = data.workoutLogs;
         bodyLogs = data.bodyLogs;
         sleepLogs = data.sleepLogs || sleepLogs;
+        stepLogs = data.stepLogs || stepLogs;
         plans = data.plans;
         machines = data.machines || machines;
         scheduledPlans = data.scheduledPlans || [];
         // planHistory を持たない古いバックアップで既存のトレ時間履歴を消さない
         planHistory = data.planHistory || planHistory;
       }
-      saveWorkoutLogs(); saveBodyLogs(); saveSleepLogs(); savePlans(); saveMachines(); saveScheduledPlans(); savePlanHistory();
+      saveWorkoutLogs(); saveBodyLogs(); saveSleepLogs(); saveStepLogs(); savePlans(); saveMachines(); saveScheduledPlans(); savePlanHistory();
       closeModal('modal-settings');
       renderAll();
       alert('インポートが完了しました');
@@ -2712,9 +2909,9 @@ function importData(event) {
 }
 
 function resetAllData() {
-  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・睡眠記録・プラン・マシン・予定・トレ時間履歴がすべて消え、元に戻せません。')) return;
+  if (!confirm('全データを初期化しますか？\nワークアウト記録・体重体脂肪・睡眠記録・歩数記録・プラン・マシン・予定・トレ時間履歴がすべて消え、元に戻せません。')) return;
   if (!confirm('本当によろしいですか？この操作は取り消せません。')) return;
-  ['workoutLogs', 'bodyLogs', 'sleepLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun', 'planHistory'].forEach(key => localStorage.removeItem(key));
+  ['workoutLogs', 'bodyLogs', 'sleepLogs', 'stepLogs', 'plans', 'machines', 'scheduledPlans', 'activeRun', 'planHistory'].forEach(key => localStorage.removeItem(key));
   location.reload();
 }
 
