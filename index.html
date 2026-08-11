@@ -1181,8 +1181,11 @@ function renderTodayPlanCard() {
       }
       return divider +
         '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
-        '<p style="margin:0 0 8px;">' + dayChip + (e.s.completed ? '<span class="badge" style="margin-left:8px;">実施済</span>' : '') + '</p>' +
-        '<p style="font-weight:800;font-size:19px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' + escapeHtml(e.plan.name) + '</p>' +
+        '<p style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
+        dayChip +
+        '<span style="font-weight:800;font-size:19px;min-width:0;overflow-wrap:break-word;">' + escapeHtml(e.plan.name) + '</span>' +
+        (e.s.completed ? '<span class="badge">実施済</span>' : '') +
+        '</p>' +
         footer +
         '</div>';
     }).join('');
