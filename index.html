@@ -1147,23 +1147,27 @@ function renderTrainingResults() {
 
 function renderTodayPlanCard() {
   const el = document.getElementById('today-plan-card');
+  const today = todayStr();
+  const next = scheduledPlans
+    .filter(s => s.date > today && plans.some(p => p.id === s.planId))
+    .sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
   const entries = [
-    { label: '今日', date: todayStr() },
-    { label: '明日', date: daysAgoStr(-1) }
+    { label: '今日', date: today },
+    { label: next ? fmtDateLabel(next.date) : '次の予定', date: next ? next.date : null }
   ].map(d => {
-    const s = scheduledPlans.find(x => x.date === d.date);
+    const s = d.date ? scheduledPlans.find(x => x.date === d.date) : null;
     const plan = s ? plans.find(p => p.id === s.planId) : null;
     return { label: d.label, s, plan };
   });
   el.style.border = entries.some(e => e.plan) ? '2px solid var(--accent)' : '';
   el.innerHTML =
-    '<p class="field-label" style="margin-bottom:10px;">📅 今日・明日の予定</p>' +
+    '<p class="field-label" style="margin-bottom:10px;">📅 今日・次の予定</p>' +
     entries.map((e, i) => {
       const last = i === entries.length - 1;
       const divider = i === 1 ? '<hr style="border:none;border-top:1px solid var(--border);margin:0 0 12px;">' : '';
       const dayChip = i === 0
         ? '<span class="mini-chip c-green" style="font-size:13px;">🔵 今日</span>'
-        : '<span class="mini-chip" style="font-size:13px;">🔷 明日</span>';
+        : '<span class="mini-chip" style="font-size:13px;">🔷 ' + e.label + '</span>';
       if (!e.plan) {
         return divider + '<p style="margin:0 0 ' + (last ? '0' : '12px') + ';">' + dayChip +
           '<span style="font-size:15px;color:var(--text-muted);margin-left:8px;">予定はありません</span></p>';
