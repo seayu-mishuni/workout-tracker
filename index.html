@@ -1151,9 +1151,10 @@ function renderTodayPlanCard() {
   const next = scheduledPlans
     .filter(s => s.date > today && plans.some(p => p.id === s.planId))
     .sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
+  const tomorrow = daysAgoStr(-1);
   const entries = [
     { label: '今日', date: today },
-    { label: next ? fmtDateLabel(next.date) : '次の予定', date: next ? next.date : null }
+    { label: next ? (next.date === tomorrow ? '明日' : fmtDateLabel(next.date)) : '次の予定', date: next ? next.date : null }
   ].map(d => {
     const s = d.date ? scheduledPlans.find(x => x.date === d.date) : null;
     const plan = s ? plans.find(p => p.id === s.planId) : null;
