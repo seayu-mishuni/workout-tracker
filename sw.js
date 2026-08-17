@@ -5,7 +5,7 @@
  * 新しい index.html が画面に出るのは次回の起動から。
  * コードを更新したら CACHE のバージョンを必ず上げること（古いキャッシュの破棄用）。
  */
-const CACHE = 'workout-v2';
+const CACHE = 'workout-v3';
 const ASSETS = ['./', './index.html', './icon.png', './manifest.json'];
 
 self.addEventListener('install', event => {
