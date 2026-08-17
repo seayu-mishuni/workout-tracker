@@ -1,9 +1,11 @@
 /*
- * ネットワーク優先（network-first）でキャッシュはフォールバック専用。
- * 更新版を配置したら次のオンライン起動で必ず新しい index.html が読まれ、
- * 圏外・電波が弱いジムではキャッシュから起動できる。
+ * キャッシュ優先＋裏で更新（stale-while-revalidate）。
+ * 起動時はキャッシュから即座に表示するので、電波が弱いジムでも待たされない。
+ * 更新版の取得は裏で走らせてキャッシュだけ差し替えるため、
+ * 新しい index.html が画面に出るのは次回の起動から。
+ * コードを更新したら CACHE のバージョンを必ず上げること（古いキャッシュの破棄用）。
  */
-const CACHE = 'workout-v1';
+const CACHE = 'workout-v2';
 const ASSETS = ['./', './index.html', './icon.png', './manifest.json'];
 
 self.addEventListener('install', event => {
@@ -28,14 +30,23 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(req)
-      .then(res => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then(cache => cache.put(req, copy));
-        }
-        return res;
-      })
-      .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
+    caches.match(req).then(hit => {
+      const fresh = fetch(req)
+        .then(res => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then(cache => cache.put(req, copy));
+          }
+          return res;
+        })
+        // 通信が失敗しても裏の更新なので握りつぶす。キャッシュが無いときだけ index.html を返す
+        .catch(() => hit || caches.match('./index.html'));
+      if (hit) {
+        // キャッシュを即返した後も更新の取得が終わるまで SW を止めさせない
+        event.waitUntil(fresh.catch(() => {}));
+        return hit;
+      }
+      return fresh;
+    })
   );
 });
