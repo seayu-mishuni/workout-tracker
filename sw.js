@@ -11,7 +11,9 @@ const ASSETS = ['./', './index.html', './icon.png', './manifest.json'];
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(ASSETS))
+      // reload 指定でブラウザのHTTPキャッシュを迂回する。
+      // これが無いと新規インストール時点で既に古い index.html を掴むことがある。
+      .then(cache => cache.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
@@ -31,7 +33,10 @@ self.addEventListener('fetch', event => {
   if (new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
     caches.match(req).then(hit => {
-      const fresh = fetch(req)
+      // ブラウザ自身のHTTPキャッシュに邪魔されると、裏で取り直しても同じ古い中身を
+      // 書き戻してしまい永久に更新されない。no-cache で必ずサーバに確認させる。
+      // req をそのまま渡すと navigate モードのリクエストでは例外になるため URL から作り直す。
+      const fresh = fetch(new Request(req.url, { cache: 'no-cache' }))
         .then(res => {
           if (res && res.ok) {
             const copy = res.clone();
