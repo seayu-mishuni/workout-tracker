@@ -1127,9 +1127,7 @@ function renderResultsCalendar() {
     const border = dateStr === selectedResultDate ? '2px solid var(--accent)' : (dateStr === today ? '1px solid var(--border-strong)' : 'none');
     const schedDot = (!sched || sched.completed) ? '' :
       '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--purple);"></span>';
-    const recordOnlyDot = recordOnly ?
-      '<span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--amber);"></span>' : '';
-    html += '<div onclick="selectResultDay(\'' + dateStr + '\')" style="position:relative;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + schedDot + recordOnlyDot + '</div>';
+    html += '<div onclick="selectResultDay(\'' + dateStr + '\')" style="position:relative;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;background:' + bg + ';color:' + fg + ';border:' + border + ';">' + day + schedDot + '</div>';
   }
   html += '</div>';
   document.getElementById('res-calendar').innerHTML = html;
