@@ -1638,7 +1638,8 @@ function deleteBodyLog(date) {
 
 function renderBodyLogList() {
   const el = document.getElementById('body-log-list');
-  const sorted = [...bodyLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const weekAgoStr = daysAgoStr(5);
+  const sorted = [...bodyLogs].filter(b => b.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) {
     el.innerHTML = '<div class="empty">まだ記録がありません</div>';
     return;
@@ -1742,7 +1743,7 @@ function deleteSleepLog(date) {
 
 function renderSleepLogList() {
   const el = document.getElementById('sleep-log-list');
-  const weekAgoStr = daysAgoStr(7);
+  const weekAgoStr = daysAgoStr(5);
   const sorted = [...sleepLogs].filter(s => s.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) {
     el.innerHTML = '<div class="empty">まだ記録がありません</div>';
@@ -1807,7 +1808,7 @@ function deleteStepLog(date) {
 
 function renderStepLogList() {
   const el = document.getElementById('step-log-list');
-  const weekAgoStr = daysAgoStr(7);
+  const weekAgoStr = daysAgoStr(5);
   const sorted = [...stepLogs].filter(s => s.date >= weekAgoStr).sort((a, b) => b.date.localeCompare(a.date));
   if (sorted.length === 0) {
     el.innerHTML = '<div class="empty">まだ記録がありません</div>';
