@@ -328,6 +328,24 @@
       </div>
 
       <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">🗾 日本縦断チャレンジ</p>
+        <div id="journey-map-wrap" style="position:relative;width:100%;max-width:320px;margin:0 auto;">
+          <img src="500px-Japan_topographic_blank_map.jpg" style="width:100%;display:block;border-radius:8px;" alt="日本地図">
+          <svg id="journey-map-svg" viewBox="0 0 500 683" style="position:absolute;top:0;left:0;width:100%;height:100%;"></svg>
+        </div>
+        <div id="journey-info" style="margin-top:12px;"></div>
+        <details style="margin-top:10px;">
+          <summary class="field-label" style="cursor:pointer;">設定</summary>
+          <div style="margin-top:10px;">
+            <label class="field-label">歩幅 (m)</label>
+            <input type="number" step="0.01" min="0.3" max="1.2" id="journey-stride-input" style="margin-bottom:10px;" onchange="onJourneySettingsChange()">
+            <div class="check-row"><input type="checkbox" id="journey-include-steps" onchange="onJourneySettingsChange()"> <label for="journey-include-steps" style="margin-left:4px;">歩数を距離に含める</label></div>
+            <div class="check-row"><input type="checkbox" id="journey-include-treadmill" onchange="onJourneySettingsChange()"> <label for="journey-include-treadmill" style="margin-left:4px;">トレッドミルを距離に含める</label></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
         <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
         <div id="res-assessment"></div>
       </div>
@@ -671,6 +689,64 @@ const DEFAULT_MACHINES = [
   { name: 'アブベンチ', type: 'reps', part: '腹' }
 ];
 
+// 500px-Japan_topographic_blank_map.jpg (500x683px) 上でクリック計測してキャリブレーションした座標。
+// 実際の緯度経度ではなく、この画像上のピクセル位置(px)を直接使う。
+// 枚方市を出発し、北の端(宗谷岬)へ→折り返して南の端(佐多岬)へ→枚方市へ戻る往復ルート。
+const JOURNEY_PLACES = {
+  '枚方':   { x: 262, y: 410 },
+  '大阪':   { x: 250, y: 425 },
+  '名古屋': { x: 290, y: 415 },
+  '東京':   { x: 345, y: 400 },
+  '仙台':   { x: 358, y: 352 },
+  '青森':   { x: 342, y: 293 },
+  '函館':   { x: 345, y: 270 },
+  '札幌':   { x: 331, y: 185 },
+  '宗谷岬': { x: 349, y: 111 },
+  '広島':   { x: 190, y: 420 },
+  '下関':   { x: 145, y: 435 },
+  '福岡':   { x: 133, y: 443 },
+  '熊本':   { x: 118, y: 463 },
+  '鹿児島': { x: 125, y: 490 },
+  '佐多岬': { x: 136, y: 506 }
+};
+function journeyLeg(name, km) { return { name: name, km: km, px: JOURNEY_PLACES[name] }; }
+const JOURNEY_ROUTE = {
+  id: 'hirakata-oufuku',
+  name: '日本縦断往復（枚方 → 宗谷岬 → 佐多岬 → 枚方）',
+  waypoints: [
+    journeyLeg('枚方',   0),
+    journeyLeg('名古屋', 150),
+    journeyLeg('東京',   500),
+    journeyLeg('仙台',   850),
+    journeyLeg('青森',   1220),
+    journeyLeg('函館',   1330),
+    journeyLeg('札幌',   1590),
+    journeyLeg('宗谷岬', 1910),
+    journeyLeg('札幌',   2230),
+    journeyLeg('函館',   2490),
+    journeyLeg('青森',   2600),
+    journeyLeg('仙台',   2970),
+    journeyLeg('東京',   3320),
+    journeyLeg('名古屋', 3670),
+    journeyLeg('枚方',   3820),
+    journeyLeg('大阪',   3835),
+    journeyLeg('広島',   4135),
+    journeyLeg('下関',   4335),
+    journeyLeg('福岡',   4405),
+    journeyLeg('熊本',   4525),
+    journeyLeg('鹿児島', 4675),
+    journeyLeg('佐多岬', 4735),
+    journeyLeg('鹿児島', 4795),
+    journeyLeg('熊本',   4945),
+    journeyLeg('福岡',   5065),
+    journeyLeg('下関',   5135),
+    journeyLeg('広島',   5335),
+    journeyLeg('大阪',   5635),
+    journeyLeg('枚方',   5650)
+  ]
+};
+const JOURNEY_ROUTES = [JOURNEY_ROUTE];
+
 const DEFAULT_PLANS = [
   { name: 'ベーシックプラン', exercises: [
     { name: 'トレッドミル', type: 'cardio', setCount: 1, duration: 20, speed: 6, incline: 1 },
@@ -715,6 +791,17 @@ if (!machines) {
   });
   if (migrated) store.set('machines', machines);
 }
+
+let journeySettings = store.get('journeySettings', null);
+if (!journeySettings) {
+  journeySettings = { strideM: 0.7, includeSteps: true, includeTreadmill: true, routeId: 'hirakata-oufuku' };
+  store.set('journeySettings', journeySettings);
+} else if (journeySettings.routeId === 'nihon-judan') {
+  // 旧ルート(片道)を使っていた既存ユーザーは往復ルートに移行する
+  journeySettings.routeId = 'hirakata-oufuku';
+  store.set('journeySettings', journeySettings);
+}
+function saveJourneySettings() { store.set('journeySettings', journeySettings); }
 
 function saveWorkoutLogs() { store.set('workoutLogs', workoutLogs); }
 function saveBodyLogs() { store.set('bodyLogs', bodyLogs); }
@@ -1189,6 +1276,7 @@ function renderTrainingResults() {
   renderResultsBodyChart();
   renderResultsSleepChart();
   renderResultsStepsChart();
+  renderJourney();
 }
 
 function renderTodayPlanCard() {
@@ -1723,6 +1811,99 @@ function renderResultsStepsChart() {
   const stepsVals = monthLogs.map(s => s.steps);
   const avgSteps = stepsVals.length ? Math.round(stepsVals.reduce((a, b) => a + b, 0) / stepsVals.length) : null;
   document.getElementById('res-steps-avg').textContent = avgSteps != null ? formatInt(avgSteps) + '歩' : '-';
+}
+
+/* ---------- 日本縦断チャレンジ ---------- */
+
+function journeyTreadmillKm() {
+  let km = 0;
+  workoutLogs.forEach(l => {
+    if (l.type !== 'cardio') return;
+    l.sets.forEach(s => { if (s.duration && s.speed) km += s.speed * s.duration / 60; });
+  });
+  return km;
+}
+
+function journeyStepsKm() {
+  const totalSteps = stepLogs.reduce((sum, s) => sum + (s.steps || 0), 0);
+  return totalSteps * journeySettings.strideM / 1000;
+}
+
+function journeyTotalKm() {
+  let km = 0;
+  if (journeySettings.includeTreadmill) km += journeyTreadmillKm();
+  if (journeySettings.includeSteps) km += journeyStepsKm();
+  return km;
+}
+
+function journeyCurrentRoute() {
+  return JOURNEY_ROUTES.find(r => r.id === journeySettings.routeId) || JOURNEY_ROUTES[0];
+}
+
+// 累積距離から現在の区間・区間内進捗・現在地座標を求める（終点到達後は終点で固定）
+function computeJourneyProgress(totalKm) {
+  const wps = journeyCurrentRoute().waypoints;
+  const last = wps[wps.length - 1];
+  if (totalKm >= last.km) {
+    return { from: wps[wps.length - 2], to: last, frac: 1, px: last.px, totalKm, routeKm: last.km, done: true };
+  }
+  let from = wps[0], to = wps[1];
+  for (let i = 0; i < wps.length - 1; i++) {
+    if (totalKm >= wps[i].km && totalKm < wps[i + 1].km) { from = wps[i]; to = wps[i + 1]; break; }
+  }
+  const frac = (totalKm - from.km) / (to.km - from.km);
+  const px = { x: from.px.x + (to.px.x - from.px.x) * frac, y: from.px.y + (to.px.y - from.px.y) * frac };
+  return { from, to, frac, px, totalKm, routeKm: last.km, done: false };
+}
+
+function renderJourney() {
+  const strideInput = document.getElementById('journey-stride-input');
+  if (strideInput) strideInput.value = journeySettings.strideM;
+  const stepsCheck = document.getElementById('journey-include-steps');
+  if (stepsCheck) stepsCheck.checked = journeySettings.includeSteps;
+  const treadmillCheck = document.getElementById('journey-include-treadmill');
+  if (treadmillCheck) treadmillCheck.checked = journeySettings.includeTreadmill;
+
+  const totalKm = journeyTotalKm();
+  const route = journeyCurrentRoute();
+  const progress = computeJourneyProgress(totalKm);
+  const pct = Math.min(100, (progress.totalKm / progress.routeKm) * 100);
+
+  const passedWps = route.waypoints.filter(w => w.km <= totalKm);
+  const trailPoints = [...passedWps.map(w => w.px), progress.px];
+  const trailPath = trailPoints.map(p => p.x + ',' + p.y).join(' ');
+
+  const markers = route.waypoints.map(w => {
+    const reached = w.km <= totalKm;
+    return '<circle cx="' + w.px.x + '" cy="' + w.px.y + '" r="4" fill="' + (reached ? 'var(--accent)' : 'rgba(255,255,255,0.5)') + '" stroke="#06170b" stroke-width="1"/>' +
+      '<text x="' + (w.px.x + 6) + '" y="' + (w.px.y + 3) + '" font-size="11" font-weight="700" fill="#eafbea" stroke="#06170b" stroke-width="2" paint-order="stroke">' + escapeHtml(w.name) + '</text>';
+  }).join('');
+
+  document.getElementById('journey-map-svg').innerHTML =
+    '<polyline points="' + trailPath + '" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+    markers +
+    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="7" fill="var(--coral)" stroke="#fff" stroke-width="2"/>';
+
+  const locationLabel = progress.done
+    ? '🎉 ゴール「' + route.waypoints[route.waypoints.length - 1].name + '」に到達！'
+    : escapeHtml(progress.from.name) + ' → ' + escapeHtml(progress.to.name) + '（区間' + Math.round(progress.frac * 100) + '%）';
+
+  document.getElementById('journey-info').innerHTML =
+    '<p style="margin:0 0 8px;font-size:17px;font-weight:800;">' + locationLabel + '</p>' +
+    '<div class="row">' +
+    '<div class="stat"><p>総距離</p><p>' + round1(totalKm) + '<span class="unit">km</span></p></div>' +
+    '<div class="stat"><p>全行程比</p><p>' + round1(pct) + '<span class="unit">%</span></p></div>' +
+    '</div>' +
+    '<p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">' + route.name + '・全行程' + formatInt(route.waypoints[route.waypoints.length - 1].km) + 'km</p>';
+}
+
+function onJourneySettingsChange() {
+  const stride = parseFloat(document.getElementById('journey-stride-input').value);
+  journeySettings.strideM = isNaN(stride) || stride <= 0 ? 0.7 : stride;
+  journeySettings.includeSteps = document.getElementById('journey-include-steps').checked;
+  journeySettings.includeTreadmill = document.getElementById('journey-include-treadmill').checked;
+  saveJourneySettings();
+  renderJourney();
 }
 
 /* ---------- からだ ---------- */
