@@ -263,6 +263,7 @@
 
       <div class="card">
         <p class="field-label" id="res-summary-label" style="margin-bottom:8px;">今月のサマリー</p>
+        <div id="res-streak" style="margin-bottom:10px;"></div>
         <div class="row">
           <div class="stat" style="flex:1;"><p id="res-last-label">前回のトレ</p><div id="res-last-training" style="margin-top:6px;">-</div></div>
         </div>
@@ -272,10 +273,13 @@
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
-          <div class="stat"><p>消費カロリー</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
+          <div class="stat"><p>消費カロリー(目安)</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>部位別セット数</p><div id="res-parts-sets" style="margin-top:6px;font-size:15px;font-weight:700;line-height:1.6;">-</div></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="stat"><p>部位別ボリューム（前月比）</p><div id="res-parts-volume" style="margin-top:6px;font-size:15px;font-weight:700;line-height:1.8;">-</div></div>
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>総セット数</p><p id="res-total-sets">0<span class="unit">セット</span></p></div>
@@ -283,7 +287,7 @@
         </div>
         <div class="row" style="margin-top:10px;">
           <div class="stat"><p>前月比</p><p id="res-vs-last-month">-</p></div>
-          <div class="stat"><p>🚶 平均歩数(1日)</p><p id="res-avg-steps">-</p></div>
+          <div class="stat"><p>🚶 平均歩数(直近30日)</p><p id="res-avg-steps">-</p></div>
         </div>
       </div>
 
@@ -300,8 +304,8 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">体重・体脂肪の推移</p>
         <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均体重(1ヶ月)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
-          <div class="stat"><p>平均体脂肪率(1ヶ月)</p><p id="res-body-avg-fat">-<span class="unit">%</span></p></div>
+          <div class="stat"><p>平均体重(直近30日)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
+          <div class="stat"><p>平均体脂肪率(直近30日)</p><p id="res-body-avg-fat">-<span class="unit">%</span></p></div>
         </div>
         <div id="res-body-chart"></div>
       </div>
@@ -309,7 +313,7 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">😴 睡眠の推移</p>
         <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均睡眠時間(1ヶ月)</p><p id="res-sleep-avg-hours">-</p></div>
+          <div class="stat"><p>平均睡眠時間(直近30日)</p><p id="res-sleep-avg-hours">-</p></div>
           <div class="stat"><p>直近の就寝時間</p><p id="res-sleep-latest-bedtime">-</p></div>
         </div>
         <div id="res-sleep-chart"></div>
@@ -318,7 +322,7 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">🚶 歩数の推移</p>
         <div class="row" style="margin-bottom:10px;">
-          <div class="stat"><p>平均歩数(1ヶ月)</p><p id="res-steps-avg">-</p></div>
+          <div class="stat"><p>平均歩数(直近30日)</p><p id="res-steps-avg">-</p></div>
         </div>
         <div id="res-steps-chart"></div>
       </div>
@@ -369,6 +373,10 @@
       <div class="row" style="margin-bottom:16px;">
         <div class="stat"><p>月初から</p><p id="body-month-diff">-</p></div>
         <div class="stat"><p>除脂肪体重</p><p id="body-lean">-<span class="unit">kg</span></p></div>
+      </div>
+      <div class="card" id="body-target-card" style="display:none;">
+        <p class="field-label" style="margin-bottom:8px;">目標体重</p>
+        <div id="body-target-detail"></div>
       </div>
       <div class="card">
         <details>
@@ -466,7 +474,6 @@
     <h3>種目を追加</h3>
     <label class="field-label">種目名</label>
     <select id="ex-title" style="margin-bottom:12px;" onchange="onExNameInput()"></select>
-    <datalist id="ex-name-history"></datalist>
     <label class="field-label">種別</label>
     <div class="type-toggle" id="ex-type-toggle">
       <button type="button" class="active" data-type="strength" onclick="setExType('strength')">筋トレ (重量×回数)</button>
@@ -485,6 +492,7 @@
     <h3 id="add-plan-title">テンプレートを作成</h3>
     <label class="field-label">テンプレート名</label>
     <input type="text" id="plan-title" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
+    <datalist id="ex-name-history"></datalist>
     <div id="plan-exercises"></div>
     <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
     <button class="primary" onclick="savePlan()">保存</button>
@@ -542,6 +550,12 @@
         <option value="180">3分</option>
       </select>
       <p style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">プラン実行中に「次のセット」を押すと自動でカウントダウンします。</p>
+    </div>
+    <p class="field-label">目標体重</p>
+    <div class="card">
+      <input type="number" step="0.1" min="0" id="target-weight-input" placeholder="目標体重 kg" style="margin-bottom:8px;">
+      <button class="secondary" onclick="saveTargetWeight()">保存</button>
+      <p style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">「からだ」画面に目標までの差と到達予測日を表示します。空欄にして保存すると解除されます。</p>
     </div>
     <p class="field-label">データ管理</p>
     <div class="card" style="padding:0;">
@@ -833,7 +847,7 @@ function deleteLog(id) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 /* ---------- 種目追加モーダル ---------- */
@@ -894,7 +908,8 @@ function openEditExercise(id) {
 function onExNameInput() {
   const name = document.getElementById('ex-title').value.trim();
   const m = machines.find(m => m.name === name);
-  if (m) setExType(m.type);
+  // 種別が変わらないマシンへの付け替えでは、入力済みのセットを消さない
+  if (m && m.type !== exCurrentType) setExType(m.type);
 }
 
 function setExType(type) {
@@ -910,30 +925,42 @@ function addSetRow(prefill) {
   const prevRow = wrap.lastElementChild;
   const row = document.createElement('div');
   row.className = 'set-row';
+  const delBtn = '<span class="step-btn" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--coral);border-color:var(--coral);cursor:pointer;" onclick="removeSetRow(this)">×</span>';
   if (exCurrentType === 'cardio') {
     const prevDuration = prefill ? (prefill.duration != null ? prefill.duration : '') : (prevRow ? prevRow.querySelector('.set-duration').value : '');
     const prevSpeed = prefill ? (prefill.speed != null ? prefill.speed : '') : (prevRow ? prevRow.querySelector('.set-speed').value : '');
     const prevIncline = prefill ? (prefill.incline != null ? prefill.incline : '') : (prevRow ? prevRow.querySelector('.set-incline').value : '');
-    row.innerHTML = '<span>セット' + idx + '</span>' +
+    row.innerHTML = '<span class="set-label">セット' + idx + '</span>' +
       '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
       '<input type="number" step="0.1" class="set-speed" placeholder="スピードkm/h" value="' + prevSpeed + '">' +
-      '<input type="number" step="0.5" class="set-incline" placeholder="傾斜%(任意)" value="' + prevIncline + '">';
+      '<input type="number" step="0.5" class="set-incline" placeholder="傾斜%(任意)" value="' + prevIncline + '">' + delBtn;
   } else if (exCurrentType === 'reps') {
     const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps-only').value : '');
-    row.innerHTML = '<span>セット' + idx + '</span>' +
-      '<input type="number" class="set-reps-only" placeholder="回数" value="' + prevReps + '">';
+    row.innerHTML = '<span class="set-label">セット' + idx + '</span>' +
+      '<input type="number" class="set-reps-only" placeholder="回数" value="' + prevReps + '">' + delBtn;
   } else {
     const prevWeight = prefill ? (prefill.weight != null ? prefill.weight : '') : (prevRow ? prevRow.querySelector('.set-weight').value : '');
     const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps').value : '');
-    row.innerHTML = '<span>セット' + idx + '</span>' +
+    row.innerHTML = '<span class="set-label">セット' + idx + '</span>' +
       '<div class="stepper">' +
       '<button type="button" class="step-btn" onclick="adjustWeight(this,-5)">－</button>' +
       '<input type="number" step="5" class="set-weight" placeholder="kg" value="' + prevWeight + '">' +
       '<button type="button" class="step-btn" onclick="adjustWeight(this,5)">＋</button>' +
       '</div>' +
-      '<input type="number" class="set-reps" placeholder="回数" style="flex:1;min-width:0;" value="' + prevReps + '">';
+      '<input type="number" class="set-reps" placeholder="回数" style="flex:1;min-width:0;" value="' + prevReps + '">' + delBtn;
   }
   wrap.appendChild(row);
+}
+
+// セット行を1つ削除し、残った行の「セットN」表示を振り直す（最低1行は残す）
+function removeSetRow(btn) {
+  const wrap = document.getElementById('ex-sets');
+  if (wrap.children.length <= 1) { alert('セットは最低1つ必要です'); return; }
+  btn.closest('.set-row').remove();
+  [...wrap.children].forEach((row, i) => {
+    const label = row.querySelector('.set-label');
+    if (label) label.textContent = 'セット' + (i + 1);
+  });
 }
 
 function adjustWeight(btn, delta) {
@@ -1013,6 +1040,22 @@ function allExerciseNames() {
 }
 
 function isStrengthLog(l) { return l.type !== 'cardio' && l.type !== 'reps'; }
+
+// 指定日より前に記録された、その種目の直近の記録を返す（プラン実行時に前回実績を出すため）
+function lastLogBefore(name, beforeDate) {
+  return workoutLogs.filter(l => l.exercise === name && l.date < beforeDate)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .pop() || null;
+}
+
+function formatLogSets(log) {
+  if (!log) return null;
+  return log.sets.map(s => {
+    if (log.type === 'cardio') return (s.duration || 0) + '分' + (s.speed ? ' / ' + s.speed + 'km/h' : '');
+    if (log.type === 'reps') return (s.reps || 0) + '回';
+    return s.weight + 'kg × ' + s.reps;
+  }).join(' / ');
+}
 
 let calendarViewMonth = null;
 let selectedResultDate = null;
@@ -1199,7 +1242,34 @@ function renderTodayPlanCard() {
     }).join('');
 }
 
+// 「今日」記録が無ければ「昨日」を起点に、記録のある日が連続している日数を数える
+// （今日ジムに行く前でも、前日まで続いていれば連続記録が0に見えてしまわないように）
+function computeWorkoutStreak() {
+  const daySet = new Set(workoutLogs.map(l => l.date));
+  let cursor = new Date(todayStr() + 'T00:00:00');
+  if (!daySet.has(fmtYmd(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (daySet.has(fmtYmd(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  const weekAgo = daysAgoStr(6);
+  const thisWeekCount = new Set([...daySet].filter(d => d >= weekAgo)).size;
+  return { streak, thisWeekCount };
+}
+
+function renderStreak() {
+  const { streak, thisWeekCount } = computeWorkoutStreak();
+  const el = document.getElementById('res-streak');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    '<span class="mini-chip c-amber">🔥 ' + streak + '日連続</span>' +
+    '<span class="mini-chip c-green">📆 今週' + thisWeekCount + '回</span>' +
+    '</div>';
+}
+
 function renderResultsSummary() {
+  renderStreak();
   const thisMonth = calendarViewMonth || currentMonthKey();
   const isCurrentMonth = thisMonth === currentMonthKey();
   const refDate = monthRefDate(thisMonth);
@@ -1219,14 +1289,17 @@ function renderResultsSummary() {
   document.getElementById('res-count').textContent = daysWithLogs + '日';
   document.getElementById('res-volume').innerHTML = formatInt(totalVolume) + '<span class="unit">kg</span>';
   document.getElementById('res-parts-sets').innerHTML = partsDonutSvg(partCounts);
+  renderPartsVolume(thisMonth);
   document.getElementById('res-total-sets').innerHTML = formatInt(totalSets) + '<span class="unit">セット</span>';
   document.getElementById('res-total-reps').innerHTML = formatInt(totalReps) + '<span class="unit">回</span>';
   document.getElementById('res-calories').innerHTML = formatInt(estimateCalories(logsThisMonth, refDate)) + '<span class="unit">kcal</span>';
 
-  const stepLogsThisMonth = stepLogs.filter(s => monthKey(s.date) === thisMonth);
+  // 「歩数の推移」カードと窓を揃えるため、暦月ではなく直近30日の記録日平均で統一する
+  const stepCutoff30 = daysAgoStr(30);
+  const stepLogsRecent = stepLogs.filter(s => s.date >= stepCutoff30);
   const avgStepsEl = document.getElementById('res-avg-steps');
-  if (stepLogsThisMonth.length > 0) {
-    const avgSteps = Math.round(stepLogsThisMonth.reduce((s, x) => s + x.steps, 0) / stepLogsThisMonth.length);
+  if (stepLogsRecent.length > 0) {
+    const avgSteps = Math.round(stepLogsRecent.reduce((s, x) => s + x.steps, 0) / stepLogsRecent.length);
     avgStepsEl.innerHTML = formatInt(avgSteps) + '<span class="unit">歩</span>';
   } else {
     avgStepsEl.textContent = '-';
@@ -1313,6 +1386,40 @@ function deleteDurationHistory(id) {
 function monthlyVolume(mk) {
   return workoutLogs.filter(l => monthKey(l.date) === mk && isStrengthLog(l))
     .reduce((sum, l) => sum + l.sets.reduce((s, x) => s + x.weight * x.reps, 0), 0);
+}
+
+// 部位ごとの月間ボリューム（{ 部位: kg }）。有酸素・回数のみ種目はボリュームを持たないため除外
+function monthlyVolumeByPart(mk) {
+  const byPart = {};
+  workoutLogs.filter(l => monthKey(l.date) === mk && isStrengthLog(l)).forEach(l => {
+    const part = machinePart(l.exercise);
+    byPart[part] = (byPart[part] || 0) + l.sets.reduce((s, x) => s + x.weight * x.reps, 0);
+  });
+  return byPart;
+}
+
+function renderPartsVolume(thisMonth) {
+  const el = document.getElementById('res-parts-volume');
+  if (!el) return;
+  const cur = monthlyVolumeByPart(thisMonth);
+  const prev = monthlyVolumeByPart(shiftMonthKey(thisMonth, -1));
+  const parts = BODY_PARTS.filter(p => cur[p]);
+  if (parts.length === 0) { el.innerHTML = '<div class="empty" style="padding:4px 0;">記録なし</div>'; return; }
+  el.innerHTML = parts.map(p => {
+    const v = cur[p], pv = prev[p] || 0;
+    let diff = '';
+    if (pv > 0) {
+      const pct = Math.round((v - pv) / pv * 100);
+      const color = pct > 0 ? 'var(--accent)' : pct < 0 ? 'var(--coral)' : 'var(--text-secondary)';
+      diff = ' <span style="color:' + color + ';font-size:13px;">(' + (pct > 0 ? '+' : '') + pct + '%)</span>';
+    } else {
+      diff = ' <span style="color:var(--text-muted);font-size:13px;">(前月未記録)</span>';
+    }
+    return '<div style="display:flex;justify-content:space-between;gap:8px;">' +
+      '<span style="display:flex;align-items:center;gap:5px;color:var(--text-secondary);">' +
+      '<span style="width:9px;height:9px;border-radius:2px;background:' + PART_COLORS[p] + ';display:inline-block;flex-shrink:0;"></span>' + p + '</span>' +
+      '<span>' + formatInt(v) + 'kg' + diff + '</span></div>';
+  }).join('');
 }
 
 function shiftMonthKey(mk, delta) {
@@ -1437,6 +1544,11 @@ function onExTrendChange() {
 }
 
 // 1日に同じ種目が複数記録されていても1点にまとめる。指標は種別ごとに固定
+// Epley式による推定1RM（重量 × (1 + 回数/30)）。筋トレ種目のみ意味を持つ
+function estimateOneRm(weight, reps) {
+  return weight * (1 + reps / 30);
+}
+
 function exTrendSeries(name, days) {
   const cutoff = days > 0 ? daysAgoStr(days) : '';
   const logs = workoutLogs.filter(l => l.exercise === name && l.date >= cutoff)
@@ -1444,6 +1556,7 @@ function exTrendSeries(name, days) {
   if (logs.length === 0) return null;
   const type = logs[logs.length - 1].type || 'strength';
   const byDate = new Map();
+  const oneRmByDate = new Map();
   logs.forEach(l => {
     let val;
     if (type === 'cardio') val = l.sets.reduce((s, x) => s + (x.duration || 0), 0);
@@ -1452,11 +1565,18 @@ function exTrendSeries(name, days) {
     const cur = byDate.get(l.date);
     if (cur == null) byDate.set(l.date, val);
     else byDate.set(l.date, type === 'cardio' ? cur + val : Math.max(cur, val));
+    if (type === 'strength') {
+      const bestOneRm = Math.max(...l.sets.map(s => estimateOneRm(s.weight || 0, s.reps || 0)));
+      oneRmByDate.set(l.date, Math.max(oneRmByDate.get(l.date) || 0, bestOneRm));
+    }
   });
   return {
     points: [...byDate.entries()].map(([date, value]) => ({ date, value: round1(value) })),
     unit: type === 'cardio' ? '分' : type === 'reps' ? '回' : 'kg',
-    metric: type === 'cardio' ? '合計時間' : type === 'reps' ? '最大回数' : '最大重量'
+    metric: type === 'cardio' ? '合計時間' : type === 'reps' ? '最大回数' : '最大重量',
+    oneRm: type === 'strength'
+      ? [...oneRmByDate.entries()].map(([date, value]) => ({ date, value: round1(value) }))
+      : null
   };
 }
 
@@ -1473,7 +1593,7 @@ function niceStep(x, integerOnly) {
 }
 
 function trendChartSvg(series) {
-  const { points, unit, metric } = series;
+  const { points, unit, metric, oneRm } = series;
   trendChartCounter++;
   const gradId = 'trendGrad' + trendChartCounter;
   const w = 360, h = 200, padL = 46, padR = 18, padT = 22, padB = 34;
@@ -1488,9 +1608,9 @@ function trendChartSvg(series) {
   if (hi <= maxV) hi += tickStep;
   if (lo >= minV && lo > 0) lo = Math.max(0, lo - tickStep);
   if (hi === lo) hi = lo + tickStep;
-  const xStep = points.length > 1 ? (w - padL - padR) / (points.length - 1) : 0;
+  const xScale = xScaleByDate(points.map(p => p.date), padL, w - padR);
   const y = v => padT + plotH * (1 - (v - lo) / (hi - lo));
-  const coords = points.map((p, i) => ({ x: padL + xStep * i, y: y(p.value) }));
+  const coords = points.map(p => ({ x: xScale(p.date), y: y(p.value) }));
 
   let grid = '';
   for (let v = lo, guard = 0; v <= hi + tickStep / 100 && guard < 12; v += tickStep, guard++) {
@@ -1512,10 +1632,17 @@ function trendChartSvg(series) {
     : '';
   const best = Math.max(...values);
   const latest = points[points.length - 1].value;
+  let oneRmChip = '';
+  if (oneRm && oneRm.length > 0) {
+    const latestOneRm = oneRm[oneRm.length - 1].value;
+    const bestOneRm = Math.max(...oneRm.map(p => p.value));
+    oneRmChip = '<span class="mini-chip c-purple">推定1RM ' + latestOneRm + 'kg（ベスト ' + bestOneRm + 'kg）</span>';
+  }
 
   return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
     '<span class="mini-chip c-green">' + metric + ' ' + latest + unit + '</span>' +
     '<span class="mini-chip c-amber">🏆 ベスト ' + best + unit + '</span>' +
+    oneRmChip +
     '<span class="mini-chip">' + points.length + '日分</span>' +
     '</div>' +
     '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;">' +
@@ -1836,6 +1963,39 @@ function renderSteps() {
   document.getElementById('step-count-latest').textContent = latest ? formatInt(latest.steps) + '歩' : '-';
 }
 
+// 直近30日の体重の傾き(kg/日)から、目標体重への到達予測日を出す
+function renderTargetWeight(sorted) {
+  const card = document.getElementById('body-target-card');
+  const detail = document.getElementById('body-target-detail');
+  if (targetWeight == null || sorted.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const latest = sorted[sorted.length - 1];
+  const diff = round1(targetWeight - latest.weight);
+  const diffText = diff === 0 ? '目標に到達しています' : (diff > 0 ? '目標まで +' + diff + 'kg' : '目標まで ' + diff + 'kg');
+  const cutoff = daysAgoStr(30);
+  const recent = sorted.filter(b => b.date >= cutoff);
+  let predictionText = '';
+  if (diff !== 0) {
+    if (recent.length < 2) {
+      predictionText = '予測できません（直近30日の記録が2件以上必要）';
+    } else {
+      const first = recent[0], last = recent[recent.length - 1];
+      const days = Math.max(1, Math.floor((new Date(last.date) - new Date(first.date)) / 86400000));
+      const pacePerDay = (last.weight - first.weight) / days;
+      if (Math.abs(pacePerDay) < 0.005 || (diff > 0) !== (pacePerDay > 0)) {
+        predictionText = '今のペースでは目標方向に進んでいません';
+      } else {
+        const daysNeeded = Math.ceil(diff / pacePerDay);
+        const target = new Date(latest.date + 'T00:00:00');
+        target.setDate(target.getDate() + daysNeeded);
+        predictionText = fmtDateLabel(fmtYmd(target)) + ' ごろ到達見込み（現在のペースから推定）';
+      }
+    }
+  }
+  detail.innerHTML = '<p style="margin:0 0 4px;font-size:20px;font-weight:800;">' + targetWeight + 'kg <span style="font-size:15px;font-weight:600;color:var(--text-secondary);">・ ' + diffText + '</span></p>' +
+    (predictionText ? '<p style="margin:0;font-size:14px;color:var(--text-muted);">' + predictionText + '</p>' : '');
+}
+
 function renderBody() {
   const dateInput = document.getElementById('body-date-input');
   if (!dateInput.value) dateInput.value = todayStr();
@@ -1848,6 +2008,7 @@ function renderBody() {
     document.getElementById('body-fat-diff').textContent = '';
     document.getElementById('body-month-diff').textContent = '-';
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
+    renderTargetWeight([]);
     renderSleep();
     renderSteps();
     return;
@@ -1860,7 +2021,7 @@ function renderBody() {
   function diffText(cur, prevVal, el) {
     if (prevVal == null || cur == null) { el.textContent = ''; return; }
     const d = round1(cur - prevVal);
-    el.textContent = (d <= 0 ? '前日 ' + d : '前日 +' + d);
+    el.textContent = (d <= 0 ? '前回比 ' + d : '前回比 +' + d);
     el.style.color = d <= 0 ? 'var(--green-text)' : 'var(--coral)';
   }
   diffText(latest.weight, prev ? prev.weight : null, document.getElementById('body-weight-diff'));
@@ -1880,8 +2041,19 @@ function renderBody() {
   } else {
     document.getElementById('body-lean').innerHTML = '-<span class="unit">kg</span>';
   }
+  renderTargetWeight(sorted);
   renderSleep();
   renderSteps();
+}
+
+// 日付ベースでx座標を割り付ける。記録の間隔が空いていても、その分だけ点の間隔も広がる
+// （等間隔に並べると、間隔の空いた記録が詰まって見え、傾きが実態とずれるため）
+function xScaleByDate(dates, xStart, xEnd) {
+  const toDays = d => Math.floor(new Date(d + 'T00:00:00').getTime() / 86400000);
+  const first = toDays(dates[0]);
+  const last = toDays(dates[dates.length - 1]);
+  const span = last - first;
+  return dateStr => span > 0 ? xStart + (xEnd - xStart) * (toDays(dateStr) - first) / span : xStart;
 }
 
 function smoothPath(points) {
@@ -1920,7 +2092,7 @@ function bodyDualChartSvg(logs) {
     return [min - pad, max + pad];
   }
   const [wLo, wHi] = paddedRange(Math.min(...weights), Math.max(...weights));
-  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+  const xScale = xScaleByDate(logs.map(l => l.date), padL, w - padR);
   const wy = v => padT + plotH * (1 - (v - wLo) / (wHi - wLo));
 
   function mdLabel(dateStr) {
@@ -1961,7 +2133,7 @@ function bodyDualChartSvg(logs) {
     grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
   }
 
-  const weightCoords = logs.map((l, i) => ({ x: padL + step * i, y: wy(l.weight) }));
+  const weightCoords = logs.map((l, i) => ({ x: xScale(l.date), y: wy(l.weight) }));
   const weightLinePath = smoothPath(weightCoords);
   const weightAreaPath = weightLinePath +
     ' L' + weightCoords[weightCoords.length - 1].x + ',' + (h - padB) +
@@ -1981,7 +2153,7 @@ function bodyDualChartSvg(logs) {
     const fy = v => padT + plotH * (1 - (v - fLo) / (fHi - fLo));
     const fatCoords = logs.map((l, i) => {
       if (l.fat == null) return null;
-      return { x: padL + step * i, y: fy(l.fat) };
+      return { x: xScale(l.date), y: fy(l.fat) };
     }).filter(Boolean);
     if (fatCoords.length > 0) {
       const fatLinePath = smoothPath(fatCoords);
@@ -2035,7 +2207,7 @@ function sleepDualChartSvg(logs) {
     const pad = (max - min) * 0.2;
     return [min - pad, max + pad];
   }
-  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+  const xScale = xScaleByDate(logs.map(l => l.date), padL, w - padR);
 
   function mdLabel(dateStr) {
     return parseInt(dateStr.slice(5, 7), 10) + '/' + parseInt(dateStr.slice(8, 10), 10);
@@ -2059,7 +2231,7 @@ function sleepDualChartSvg(logs) {
   }
 
   const showDots = logs.length <= 20;
-  const hoursCoords = logs.map((l, i) => ({ x: padL + step * i, y: hy(l.hours) }));
+  const hoursCoords = logs.map((l, i) => ({ x: xScale(l.date), y: hy(l.hours) }));
   const hoursLinePath = smoothPath(hoursCoords);
   const lastH = hoursCoords[hoursCoords.length - 1];
   const lastHoursVal = lastLog.hours;
@@ -2104,7 +2276,7 @@ function stepsChartSvg(logs) {
     const pad = (max - min) * 0.2;
     return [min - pad, max + pad];
   }
-  const step = logs.length > 1 ? (w - padL - padR) / (logs.length - 1) : 0;
+  const xScale = xScaleByDate(logs.map(l => l.date), padL, w - padR);
 
   function mdLabel(dateStr) {
     return parseInt(dateStr.slice(5, 7), 10) + '/' + parseInt(dateStr.slice(8, 10), 10);
@@ -2128,7 +2300,7 @@ function stepsChartSvg(logs) {
   }
 
   const showDots = logs.length <= 20;
-  const stepsCoords = logs.map((l, i) => ({ x: padL + step * i, y: sy(l.steps) }));
+  const stepsCoords = logs.map((l, i) => ({ x: xScale(l.date), y: sy(l.steps) }));
   const stepsLinePath = smoothPath(stepsCoords);
   const lastS = stepsCoords[stepsCoords.length - 1];
   const lastStepsVal = lastLog.steps;
@@ -2188,10 +2360,20 @@ function addPlanExerciseRow(prefill) {
   const type = prefill ? prefill.type : 'strength';
   row.dataset.type = type;
   row.innerHTML =
-    '<input type="text" class="plan-ex-title" placeholder="種目名" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">' +
+    '<input type="text" class="plan-ex-title" placeholder="種目名" list="ex-name-history" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0;" value="' + (prefill ? escapeHtml(prefill.name) : '') + '" oninput="onPlanExNameInput(this)">' +
+    '<span class="step-btn" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--coral);border-color:var(--coral);cursor:pointer;" onclick="removePlanExerciseRow(this)">×</span>' +
+    '</div>' +
     '<div class="plan-ex-fields"></div>';
   wrap.appendChild(row);
   renderPlanExFields(row, type, prefill);
+}
+
+// テンプレートから種目を1つ削除する（最低1件は残す）
+function removePlanExerciseRow(btn) {
+  const wrap = document.getElementById('plan-exercises');
+  if (wrap.children.length <= 1) { alert('種目は最低1つ必要です'); return; }
+  btn.closest('.plan-ex-row').remove();
 }
 
 function onPlanExNameInput(input) {
@@ -2341,11 +2523,27 @@ function openSchedulePlan(planId) {
 function saveSchedule() {
   const date = document.getElementById('schedule-date-input').value;
   if (!date) { alert('日付を選択してください'); return; }
+  const existing = scheduledPlans.find(s => s.date === date);
+  if (existing) {
+    const existingPlan = plans.find(p => p.id === existing.planId);
+    const msg = existingPlan
+      ? fmtDateLabel(date) + 'にはすでに「' + existingPlan.name + '」の予定があります。上書きしますか？'
+      : fmtDateLabel(date) + 'の予定を上書きしますか？';
+    if (!confirm(msg)) return;
+  }
   scheduledPlans = scheduledPlans.filter(s => s.date !== date);
   scheduledPlans.push({ date, planId: scheduleTargetPlanId });
   saveScheduledPlans();
   closeModal('modal-schedule-plan');
   renderScheduleList();
+}
+
+// 実施されないまま30日以上前になった予定は、カレンダーに残り続けるだけなので起動時に掃除する
+function cleanupStaleSchedules() {
+  const cutoff = daysAgoStr(30);
+  const before = scheduledPlans.length;
+  scheduledPlans = scheduledPlans.filter(s => s.completed || s.date >= cutoff);
+  if (scheduledPlans.length !== before) saveScheduledPlans();
 }
 
 function removeSchedule(date) {
@@ -2515,6 +2713,11 @@ function renderPlanRun() {
   }
 
   const elapsedMin = Math.round((Date.now() - activeRun.startedAt) / 60000);
+  const prevLog = lastLogBefore(cur.name, activeRun.date || todayStr());
+  const prevText = prevLog ? formatLogSets(prevLog) : null;
+  const prevHtml = prevText
+    ? '<p style="margin:0 0 10px;font-size:14px;color:var(--text-muted);">前回（' + fmtDateLabel(prevLog.date) + '）: ' + prevText + '</p>'
+    : '';
 
   view.innerHTML =
     '<div id="rest-slot"></div>' +
@@ -2523,6 +2726,7 @@ function renderPlanRun() {
     ' ・ 経過 ' + elapsedMin + '分</p>' +
     '<p style="margin:2px 0 0;font-size:21px;font-weight:800;">▶ ' + escapeHtml(cur.name) + '</p>' +
     '<p style="margin:2px 0 10px;font-size:16px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
+    prevHtml +
     '<label class="field-label">実際の記録</label>' +
     actualFieldsHtml +
     '<button class="primary" onclick="nextSet()">次のセット</button>' +
@@ -2533,25 +2737,27 @@ function renderPlanRun() {
   renderRestBar();
 }
 
+// 記録できたら true。入力も目標値も無く記録できなかったときは false を返す
+// （false のときセットを消化してしまうと、記録が無いまま「完了」になってしまう）
 function recordCurrentSet() {
   const cur = activeRun.queue[activeRun.currentIndex];
-  if (!cur) return;
+  if (!cur) return false;
   const a1 = parseFloat(document.getElementById('run-actual-1')?.value);
   const a2 = parseFloat(document.getElementById('run-actual-2')?.value);
   const a3 = parseFloat(document.getElementById('run-actual-3')?.value);
   let set;
   if (cur.type === 'cardio') {
     const duration = !isNaN(a1) ? a1 : cur.duration;
-    if (!duration) return;
+    if (!duration) return false;
     set = { duration: duration, speed: !isNaN(a2) ? a2 : (cur.speed || null), incline: !isNaN(a3) ? a3 : (cur.incline || null) };
   } else if (cur.type === 'reps') {
     const reps = !isNaN(a1) ? a1 : cur.reps;
-    if (!reps) return;
+    if (!reps) return false;
     set = { reps: reps };
   } else {
     const weight = !isNaN(a1) ? a1 : cur.weight;
     const reps = !isNaN(a2) ? a2 : cur.reps;
-    if (!weight && !reps) return;
+    if (!weight && !reps) return false;
     set = { weight: weight || 0, reps: reps || 0 };
   }
   const t = activeRun.date || todayStr();
@@ -2562,10 +2768,14 @@ function recordCurrentSet() {
   }
   entry.sets.push(set);
   saveWorkoutLogs();
+  return true;
 }
 
 function nextSet() {
-  recordCurrentSet();
+  if (!recordCurrentSet()) {
+    alert('記録する値を入力してください。\n（このセットはまだ完了になりません）');
+    return;
+  }
   const finishedName = activeRun.queue[activeRun.currentIndex].name;
   activeRun.doneIndices.push(activeRun.currentIndex);
 
@@ -2632,6 +2842,16 @@ function quitPlan() {
 }
 
 /* ---------- インターバル（休憩）タイマー ---------- */
+
+let targetWeight = store.get('targetWeight', null);
+
+function saveTargetWeight() {
+  const v = parseFloat(document.getElementById('target-weight-input').value);
+  targetWeight = isNaN(v) ? null : v;
+  store.set('targetWeight', targetWeight);
+  renderBody();
+  alert(targetWeight != null ? '目標体重を保存しました' : '目標体重を解除しました');
+}
 
 let restSeconds = store.get('restSeconds', 60);
 let restEndsAt = null;
@@ -2830,6 +3050,7 @@ function deleteMachine(id) {
 function openSettings() {
   renderMachineList();
   document.getElementById('rest-seconds-select').value = String(restSeconds);
+  document.getElementById('target-weight-input').value = targetWeight != null ? targetWeight : '';
   const partSel = document.getElementById('machine-new-part');
   if (!partSel.options.length) {
     partSel.innerHTML = BODY_PARTS.map(p => '<option value="' + p + '">' + p + '</option>').join('');
@@ -2997,6 +3218,7 @@ function renderAll() {
   renderPlanScreen();
 }
 
+cleanupStaleSchedules();
 renderAll();
 
 // オフライン起動用。file:// では Service Worker が使えないので http(s) のときだけ登録する
