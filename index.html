@@ -223,6 +223,23 @@
     background: var(--card); border: 1px solid var(--border); color: var(--text-secondary);
     white-space: nowrap;
   }
+  /* 日本縦断チャレンジの地図。inner をtransformで拡大/移動し、wrapでクリップする */
+  #journey-map-wrap {
+    position: relative; width: 100%; max-width: 320px; margin: 0 auto;
+    aspect-ratio: 500 / 683; overflow: hidden; border-radius: 8px;
+    background: var(--bg); touch-action: none; cursor: grab;
+  }
+  #journey-map-wrap.dragging { cursor: grabbing; }
+  #journey-map-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+  #journey-map-inner img { width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
+  #journey-map-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+  #journey-zoom-ctl { position: absolute; right: 6px; bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+  #journey-zoom-ctl button {
+    width: 32px; height: 32px; padding: 0; border-radius: 8px;
+    border: 1px solid var(--border-strong); background: rgba(11,15,13,0.78); color: var(--text);
+    font-size: 16px; font-weight: 800; line-height: 1; cursor: pointer;
+  }
+  #journey-zoom-ctl button:active { background: var(--accent); color: var(--accent-on); }
   .mini-chip.c-blue { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
   .mini-chip.c-purple { background: var(--purple-bg); color: var(--purple-text); border-color: transparent; }
   .mini-chip.c-green { background: var(--green-bg); color: var(--green-text); border-color: transparent; }
@@ -329,10 +346,19 @@
 
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">🗾 日本縦断チャレンジ</p>
-        <div id="journey-map-wrap" style="position:relative;width:100%;max-width:320px;margin:0 auto;">
-          <img src="500px-Japan_topographic_blank_map.jpg" style="width:100%;display:block;border-radius:8px;" alt="日本地図">
-          <svg id="journey-map-svg" viewBox="0 0 500 683" style="position:absolute;top:0;left:0;width:100%;height:100%;"></svg>
+        <div id="journey-map-wrap">
+          <div id="journey-map-inner">
+            <img src="500px-Japan_topographic_blank_map.jpg" alt="日本地図" draggable="false">
+            <svg id="journey-map-svg" viewBox="0 0 500 683"></svg>
+          </div>
+          <div id="journey-zoom-ctl">
+            <button type="button" onclick="journeyZoomBtn(1.6)">＋</button>
+            <button type="button" onclick="journeyZoomBtn(1/1.6)">－</button>
+            <button type="button" onclick="journeyFocusCurrent()" title="現在地へ">◎</button>
+            <button type="button" onclick="journeyResetView()" title="全体表示">⤢</button>
+          </div>
         </div>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--text-muted);">ピンチ / ドラッグ / ダブルタップで拡大・移動できます</p>
         <div id="journey-info" style="margin-top:12px;"></div>
         <details style="margin-top:10px;">
           <summary class="field-label" style="cursor:pointer;">設定</summary>
@@ -693,21 +719,21 @@ const DEFAULT_MACHINES = [
 // 実際の緯度経度ではなく、この画像上のピクセル位置(px)を直接使う。
 // 枚方市を出発し、北の端(宗谷岬)へ→折り返して南の端(佐多岬)へ→枚方市へ戻る往復ルート。
 const JOURNEY_PLACES = {
-  '枚方':   { x: 262, y: 410 },
-  '大阪':   { x: 250, y: 425 },
-  '名古屋': { x: 290, y: 415 },
-  '東京':   { x: 345, y: 400 },
-  '仙台':   { x: 358, y: 352 },
-  '青森':   { x: 342, y: 293 },
-  '函館':   { x: 345, y: 270 },
-  '札幌':   { x: 331, y: 185 },
-  '宗谷岬': { x: 349, y: 111 },
-  '広島':   { x: 190, y: 420 },
-  '下関':   { x: 145, y: 435 },
-  '福岡':   { x: 133, y: 443 },
-  '熊本':   { x: 118, y: 463 },
-  '鹿児島': { x: 125, y: 490 },
-  '佐多岬': { x: 136, y: 506 }
+  '枚方':   { x: 241.0, y: 411.5 },
+  '大阪':   { x: 239.5, y: 414.0 },
+  '名古屋': { x: 262.7, y: 397.0 },
+  '東京':   { x: 345.8, y: 377.0 },
+  '仙台':   { x: 350.5, y: 300.5 },
+  '青森':   { x: 340.0, y: 227.0 },
+  '函館':   { x: 336.5, y: 198.5 },
+  '札幌':   { x: 343.0, y: 158.0 },
+  '宗谷岬': { x: 345.8, y: 80.5 },
+  '広島':   { x: 160.3, y: 422.0 },
+  '下関':   { x: 136.7, y: 433.3 },
+  '福岡':   { x: 130.8, y: 439.2 },
+  '熊本':   { x: 121.7, y: 464.2 },
+  '鹿児島': { x: 119.8, y: 512.0 },
+  '佐多岬': { x: 124.0, y: 526.0 }
 };
 function journeyLeg(name, km) { return { name: name, km: km, px: JOURNEY_PLACES[name] }; }
 const JOURNEY_ROUTE = {
@@ -1856,6 +1882,179 @@ function computeJourneyProgress(totalKm) {
   return { from, to, frac, px, totalKm, routeKm: last.km, done: false };
 }
 
+// 地図の拡大・移動の状態。z=1で全体表示、tx/tyはwrapのCSSピクセル単位
+let journeyView = { z: 1, tx: 0, ty: 0 };
+
+function journeyApplyView() {
+  const wrap = document.getElementById('journey-map-wrap');
+  const inner = document.getElementById('journey-map-inner');
+  if (!wrap || !inner) return;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const v = journeyView;
+  v.z = Math.min(8, Math.max(1, v.z));
+  // 拡大した地図が常にwrapを覆うように移動量を制限する（余白が出ないように）
+  v.tx = Math.min(0, Math.max(w - w * v.z, v.tx));
+  v.ty = Math.min(0, Math.max(h - h * v.z, v.ty));
+  inner.style.transform = 'translate(' + v.tx + 'px,' + v.ty + 'px) scale(' + v.z + ')';
+  // 等倍のときは地図をなぞってもページを縦スクロールできるようにする
+  wrap.style.touchAction = v.z > 1 ? 'none' : 'pan-y';
+  journeyDrawSvg();
+}
+
+// wrap上の点(cx,cy)を固定したまま拡大率をfactor倍にする
+function journeyZoomAt(factor, cx, cy) {
+  const v = journeyView;
+  const prev = v.z;
+  const next = Math.min(8, Math.max(1, v.z * factor));
+  const k = next / prev;
+  v.z = next;
+  v.tx = cx - (cx - v.tx) * k;
+  v.ty = cy - (cy - v.ty) * k;
+  journeyApplyView();
+}
+
+function journeyZoomBtn(factor) {
+  const wrap = document.getElementById('journey-map-wrap');
+  if (!wrap) return;
+  journeyZoomAt(factor, wrap.clientWidth / 2, wrap.clientHeight / 2);
+}
+
+function journeyResetView() {
+  journeyView = { z: 1, tx: 0, ty: 0 };
+  journeyApplyView();
+}
+
+// 現在地が中央に来るように拡大する
+function journeyFocusCurrent() {
+  const wrap = document.getElementById('journey-map-wrap');
+  if (!wrap) return;
+  const p = computeJourneyProgress(journeyTotalKm()).px;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const v = journeyView;
+  v.z = Math.max(v.z, 3);
+  v.tx = w / 2 - (p.x / 500) * w * v.z;
+  v.ty = h / 2 - (p.y / 683) * h * v.z;
+  journeyApplyView();
+}
+
+function journeySetupGestures() {
+  const wrap = document.getElementById('journey-map-wrap');
+  if (!wrap || wrap.dataset.gesturesReady) return;
+  wrap.dataset.gesturesReady = '1';
+  const pointers = new Map();
+  let lastMid = null, lastDist = 0, lastTapAt = 0;
+
+  const midOf = pts => ({
+    x: (pts[0].x + pts[1].x) / 2,
+    y: (pts[0].y + pts[1].y) / 2
+  });
+  const distOf = pts => Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  const local = e => {
+    const r = wrap.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+
+  wrap.addEventListener('pointerdown', e => {
+    if (e.target.closest('#journey-zoom-ctl')) return;
+    wrap.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, local(e));
+    const pts = [...pointers.values()];
+    if (pts.length === 2) { lastMid = midOf(pts); lastDist = distOf(pts); }
+    else {
+      lastMid = pts[0];
+      const now = Date.now();
+      if (now - lastTapAt < 300) journeyZoomAt(2, pts[0].x, pts[0].y);
+      lastTapAt = now;
+    }
+    wrap.classList.add('dragging');
+  });
+
+  wrap.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, local(e));
+    const pts = [...pointers.values()];
+    if (pts.length >= 2) {
+      const mid = midOf(pts), dist = distOf(pts);
+      if (lastDist > 0) journeyZoomAt(dist / lastDist, mid.x, mid.y);
+      journeyView.tx += mid.x - lastMid.x;
+      journeyView.ty += mid.y - lastMid.y;
+      lastMid = mid; lastDist = dist;
+      journeyApplyView();
+    } else if (lastMid) {
+      journeyView.tx += pts[0].x - lastMid.x;
+      journeyView.ty += pts[0].y - lastMid.y;
+      lastMid = pts[0];
+      journeyApplyView();
+    }
+    e.preventDefault();
+  });
+
+  const endPointer = e => {
+    pointers.delete(e.pointerId);
+    const pts = [...pointers.values()];
+    lastMid = pts.length ? pts[0] : null;
+    lastDist = 0;
+    if (pts.length === 0) wrap.classList.remove('dragging');
+  };
+  wrap.addEventListener('pointerup', endPointer);
+  wrap.addEventListener('pointercancel', endPointer);
+  // キャプチャが外れたまま指の情報が残ると、次のタッチをピンチと誤認するため確実に消す
+  wrap.addEventListener('lostpointercapture', endPointer);
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = local(e);
+    journeyZoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+  }, { passive: false });
+
+  window.addEventListener('resize', journeyApplyView);
+}
+
+// 拡大しても線やラベルの見た目の太さが変わらないよう、拡大率で割った値を使う
+function journeyDrawSvg() {
+  const svg = document.getElementById('journey-map-svg');
+  if (!svg) return;
+  const z = journeyView.z;
+  const totalKm = journeyTotalKm();
+  const route = journeyCurrentRoute();
+  const progress = computeJourneyProgress(totalKm);
+  const wps = route.waypoints;
+
+  // 全行程の軌跡（未踏部分も薄く見せる）
+  const fullPath = wps.map(w => w.px.x + ',' + w.px.y).join(' ');
+  // 実際に歩いた軌跡（通過済みの地点 → 現在地）
+  const walked = [...wps.filter(w => w.km <= totalKm).map(w => w.px), progress.px];
+  const walkedPath = walked.map(p => round1(p.x) + ',' + round1(p.y)).join(' ');
+
+  // 往復ルートは同じ地点が複数回現れるので、地点マーカーは名前で1つにまとめる
+  const seen = {};
+  wps.forEach(w => {
+    if (!seen[w.name]) seen[w.name] = { px: w.px, reached: false };
+    if (w.km <= totalKm) seen[w.name].reached = true;
+  });
+  const r = 3.2 / z, labelSize = 11 / z;
+  const markers = Object.entries(seen).map(([name, m]) =>
+    '<circle cx="' + m.px.x + '" cy="' + m.px.y + '" r="' + r + '" fill="' + (m.reached ? 'var(--accent)' : '#f2f6f3') +
+    '" stroke="#06170b" stroke-width="' + (1 / z) + '"/>' +
+    '<text x="' + (m.px.x + r + 2 / z) + '" y="' + (m.px.y + labelSize * 0.35) + '" font-size="' + labelSize +
+    '" font-weight="700" fill="#f2fff5" stroke="#06170b" stroke-width="' + (2.5 / z) + '" paint-order="stroke">' +
+    escapeHtml(name) + '</text>'
+  ).join('');
+
+  svg.innerHTML =
+    '<polyline points="' + fullPath + '" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="' + (3 / z) +
+    '" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<polyline points="' + fullPath + '" fill="none" stroke="#123a1d" stroke-width="' + (1.4 / z) +
+    '" stroke-dasharray="' + (3.5 / z) + ' ' + (3.5 / z) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<polyline points="' + walkedPath + '" fill="none" stroke="rgba(57,255,106,0.35)" stroke-width="' + (7 / z) +
+    '" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<polyline points="' + walkedPath + '" fill="none" stroke="var(--accent)" stroke-width="' + (2.6 / z) +
+    '" stroke-linecap="round" stroke-linejoin="round"/>' +
+    markers +
+    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="' + (7 / z) + '" fill="rgba(255,92,114,0.35)"/>' +
+    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="' + (4 / z) + '" fill="var(--coral)" stroke="#fff" stroke-width="' + (1.6 / z) + '"/>';
+}
+
 function renderJourney() {
   const strideInput = document.getElementById('journey-stride-input');
   if (strideInput) strideInput.value = journeySettings.strideM;
@@ -1864,28 +2063,16 @@ function renderJourney() {
   const treadmillCheck = document.getElementById('journey-include-treadmill');
   if (treadmillCheck) treadmillCheck.checked = journeySettings.includeTreadmill;
 
+  journeySetupGestures();
+  journeyApplyView();
+
   const totalKm = journeyTotalKm();
   const route = journeyCurrentRoute();
   const progress = computeJourneyProgress(totalKm);
   const pct = Math.min(100, (progress.totalKm / progress.routeKm) * 100);
 
-  const passedWps = route.waypoints.filter(w => w.km <= totalKm);
-  const trailPoints = [...passedWps.map(w => w.px), progress.px];
-  const trailPath = trailPoints.map(p => p.x + ',' + p.y).join(' ');
-
-  const markers = route.waypoints.map(w => {
-    const reached = w.km <= totalKm;
-    return '<circle cx="' + w.px.x + '" cy="' + w.px.y + '" r="4" fill="' + (reached ? 'var(--accent)' : 'rgba(255,255,255,0.5)') + '" stroke="#06170b" stroke-width="1"/>' +
-      '<text x="' + (w.px.x + 6) + '" y="' + (w.px.y + 3) + '" font-size="11" font-weight="700" fill="#eafbea" stroke="#06170b" stroke-width="2" paint-order="stroke">' + escapeHtml(w.name) + '</text>';
-  }).join('');
-
-  document.getElementById('journey-map-svg').innerHTML =
-    '<polyline points="' + trailPath + '" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
-    markers +
-    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="7" fill="var(--coral)" stroke="#fff" stroke-width="2"/>';
-
   const locationLabel = progress.done
-    ? '🎉 ゴール「' + route.waypoints[route.waypoints.length - 1].name + '」に到達！'
+    ? '🎉 ゴール「' + escapeHtml(route.waypoints[route.waypoints.length - 1].name) + '」に到達！'
     : escapeHtml(progress.from.name) + ' → ' + escapeHtml(progress.to.name) + '（区間' + Math.round(progress.frac * 100) + '%）';
 
   document.getElementById('journey-info').innerHTML =
@@ -1894,7 +2081,11 @@ function renderJourney() {
     '<div class="stat"><p>総距離</p><p>' + round1(totalKm) + '<span class="unit">km</span></p></div>' +
     '<div class="stat"><p>全行程比</p><p>' + round1(pct) + '<span class="unit">%</span></p></div>' +
     '</div>' +
-    '<p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">' + route.name + '・全行程' + formatInt(route.waypoints[route.waypoints.length - 1].km) + 'km</p>';
+    '<div class="row" style="margin-top:10px;">' +
+    '<div class="stat"><p>次の地点まで</p><p>' + (progress.done ? '-' : round1(progress.to.km - totalKm) + '<span class="unit">km</span>') + '</p></div>' +
+    '<div class="stat"><p>ゴールまで</p><p>' + round1(Math.max(0, progress.routeKm - totalKm)) + '<span class="unit">km</span></p></div>' +
+    '</div>' +
+    '<p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">' + route.name + '・全行程' + formatInt(progress.routeKm) + 'km</p>';
 }
 
 function onJourneySettingsChange() {
