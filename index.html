@@ -2012,6 +2012,32 @@ function journeySetupGestures() {
   window.addEventListener('resize', journeyApplyView);
 }
 
+// 現在地は「歩いている人」で表す。上下に小さく揺らして歩いている感じを出す
+function journeyWalkerSvg(px, z) {
+  const rBadge = 15 / z;          // 人を入れる丸の大きさ
+  const lift = rBadge + 4 / z;    // 現在地の真上に浮かせる量（地名に重ならないように）
+  const cy = px.y - lift;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const bobAnim = reduceMotion ? '' :
+    '<animateTransform attributeName="transform" type="translate" ' +
+    'values="0 0; 0 ' + round1(-2 / z) + '; 0 0" dur="0.9s" repeatCount="indefinite"/>';
+  return '<g>' +
+    // 現在地そのものを指す点と、そこから丸へ伸びる棒
+    '<line x1="' + px.x + '" y1="' + round1(px.y) + '" x2="' + px.x + '" y2="' + round1(cy) +
+    '" stroke="#06170b" stroke-width="' + (1.6 / z) + '"/>' +
+    '<circle cx="' + px.x + '" cy="' + round1(px.y) + '" r="' + round1(2.6 / z) +
+    '" fill="var(--coral)" stroke="#06170b" stroke-width="' + (1 / z) + '"/>' +
+    '<g>' +
+    '<circle cx="' + px.x + '" cy="' + round1(cy) + '" r="' + round1(rBadge + 4 / z) + '" fill="rgba(57,255,106,0.30)"/>' +
+    '<circle cx="' + px.x + '" cy="' + round1(cy) + '" r="' + round1(rBadge) +
+    '" fill="#f4fff7" stroke="#0f7a30" stroke-width="' + (2.2 / z) + '"/>' +
+    '<text x="' + px.x + '" y="' + round1(cy + rBadge * 0.62) + '" text-anchor="middle" font-size="' +
+    round1(rBadge * 1.55) + '">🚶</text>' +
+    bobAnim +
+    '</g>' +
+    '</g>';
+}
+
 // 拡大しても線やラベルの見た目の太さが変わらないよう、拡大率で割った値を使う
 function journeyDrawSvg() {
   const svg = document.getElementById('journey-map-svg');
@@ -2035,13 +2061,19 @@ function journeyDrawSvg() {
     if (w.km <= totalKm) seen[w.name].reached = true;
   });
   const r = 3.6 / z, labelSize = 18 / z;
-  const markers = Object.entries(seen).map(([name, m]) =>
-    '<circle cx="' + m.px.x + '" cy="' + m.px.y + '" r="' + r + '" fill="' + (m.reached ? 'var(--accent)' : '#f2f6f3') +
-    '" stroke="#06170b" stroke-width="' + (1.2 / z) + '"/>' +
-    '<text x="' + (m.px.x + r + 2.5 / z) + '" y="' + (m.px.y + labelSize * 0.35) + '" font-size="' + labelSize +
-    '" font-weight="800" fill="#f2fff5" stroke="#06170b" stroke-width="' + (4 / z) + '" paint-order="stroke">' +
-    escapeHtml(name) + '</text>'
-  ).join('');
+  const markers = Object.entries(seen).map(([name, m]) => {
+    const cfg = JOURNEY_PLACES[name] || {};
+    const dot = '<circle cx="' + m.px.x + '" cy="' + m.px.y + '" r="' + r + '" fill="' +
+      (m.reached ? 'var(--accent)' : '#f2f6f3') + '" stroke="#06170b" stroke-width="' + (1.2 / z) + '"/>';
+    if (z < (cfg.minZoom || 1)) return dot;
+    const left = cfg.side === 'left';
+    const tx = m.px.x + (left ? -1 : 1) * (r + 2.5 / z);
+    const ty = m.px.y + labelSize * (0.35 + (cfg.dy || 0));
+    return dot +
+      '<text x="' + round1(tx) + '" y="' + round1(ty) + '" text-anchor="' + (left ? 'end' : 'start') +
+      '" font-size="' + labelSize + '" font-weight="800" fill="#f2fff5" stroke="#06170b" stroke-width="' +
+      (4 / z) + '" paint-order="stroke">' + escapeHtml(name) + '</text>';
+  }).join('');
 
   svg.innerHTML =
     '<polyline points="' + fullPath + '" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="' + (3 / z) +
@@ -2053,8 +2085,7 @@ function journeyDrawSvg() {
     '<polyline points="' + walkedPath + '" fill="none" stroke="var(--accent)" stroke-width="' + (2.6 / z) +
     '" stroke-linecap="round" stroke-linejoin="round"/>' +
     markers +
-    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="' + (7 / z) + '" fill="rgba(255,92,114,0.35)"/>' +
-    '<circle cx="' + progress.px.x + '" cy="' + progress.px.y + '" r="' + (4 / z) + '" fill="var(--coral)" stroke="#fff" stroke-width="' + (1.6 / z) + '"/>';
+    journeyWalkerSvg(progress.px, z);
 }
 
 function renderJourney() {
