@@ -372,6 +372,11 @@
       </div>
 
       <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">🏋 重量チャレンジ</p>
+        <div id="weight-challenge-body"></div>
+      </div>
+
+      <div class="card">
         <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
         <div id="res-assessment"></div>
       </div>
@@ -956,6 +961,8 @@ function deleteLog(id) {
     renderAssessment();
     renderBestList();
     renderExTrend();
+    renderJourney();
+    renderWeightChallenge();
   } else {
     renderRecord();
   }
@@ -1127,6 +1134,8 @@ function saveExercise() {
     renderAssessment();
     renderBestList();
     renderExTrend();
+    renderJourney();
+    renderWeightChallenge();
   } else {
     renderRecord();
   }
@@ -1305,6 +1314,7 @@ function renderTrainingResults() {
   renderResultsSleepChart();
   renderResultsStepsChart();
   renderJourney();
+  renderWeightChallenge();
 }
 
 function renderTodayPlanCard() {
@@ -2119,6 +2129,71 @@ function renderJourney() {
     '<div class="stat"><p>ゴールまで</p><p>' + round1(Math.max(0, progress.routeKm - totalKm)) + '<span class="unit">km</span></p></div>' +
     '</div>' +
     '<p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">' + route.name + '・全行程' + formatInt(progress.routeKm) + 'km</p>';
+}
+
+/* ---------- 重量チャレンジ ---------- */
+
+// 軽い順。名前・重さ(kg)・絵文字。値は代表的な目安（個体差あり）
+const WEIGHT_MILESTONES = [
+  { name: 'ランドセル',   kg: 1.2,      emoji: '🎒' },
+  { name: '成人ひとり',   kg: 60,       emoji: '🧍' },
+  { name: '軽自動車',     kg: 700,      emoji: '🚗' },
+  { name: 'ホッキョクグマ', kg: 500,    emoji: '🐻‍❄️' },
+  { name: 'グランドピアノ', kg: 450,    emoji: '🎹' },
+  { name: 'アフリカゾウ', kg: 6000,     emoji: '🐘' },
+  { name: '大型トラック', kg: 10000,    emoji: '🚛' },
+  { name: '新幹線1両',    kg: 40000,    emoji: '🚄' },
+  { name: 'ボーイング747(空虚重量)', kg: 180000, emoji: '✈️' },
+  { name: '自由の女神像', kg: 204000,   emoji: '🗽' },
+  { name: '東京タワー',   kg: 4000000,  emoji: '🗼' }
+].sort((a, b) => a.kg - b.kg);
+
+// 筋トレ(重量×回数)の総ボリュームを全期間で合計する
+function weightChallengeTotalKg() {
+  let kg = 0;
+  workoutLogs.forEach(l => {
+    if (!isStrengthLog(l)) return;
+    l.sets.forEach(s => { if (s.weight && s.reps) kg += s.weight * s.reps; });
+  });
+  return kg;
+}
+
+// 換算対象は「1個分以上」達成した中で一番重いものを選ぶ（無ければ一番軽いもの）
+function weightChallengePickTier(totalKg) {
+  for (let i = WEIGHT_MILESTONES.length - 1; i >= 0; i--) {
+    if (totalKg >= WEIGHT_MILESTONES[i].kg) return i;
+  }
+  return 0;
+}
+
+function renderWeightChallenge() {
+  const el = document.getElementById('weight-challenge-body');
+  if (!el) return;
+  const totalKg = weightChallengeTotalKg();
+  const tierIdx = weightChallengePickTier(totalKg);
+  const tier = WEIGHT_MILESTONES[tierIdx];
+  const count = totalKg / tier.kg;
+  const wholeCount = Math.floor(count);
+  const frac = count - wholeCount;
+  const next = WEIGHT_MILESTONES[tierIdx + 1];
+
+  const stackCount = Math.min(wholeCount, 12);
+  const stack = (stackCount > 0 ? tier.emoji.repeat(stackCount) : '') +
+    (frac > 0.05 ? '<span style="opacity:0.35;">' + tier.emoji + '</span>' : '');
+  const overflow = wholeCount > 12 ? ' 他' + formatInt(wholeCount - 12) + '個' : '';
+
+  const nextHtml = next
+    ? '<p style="margin:10px 0 0;font-size:14px;color:var(--text-muted);">次は' + next.emoji + escapeHtml(next.name) +
+      '（' + formatInt(next.kg) + 'kg）・あと' + formatInt(Math.max(0, next.kg - totalKg)) + 'kg</p>'
+    : '<p style="margin:10px 0 0;font-size:14px;color:var(--text-muted);">最大ランクに到達しました🎉</p>';
+
+  el.innerHTML =
+    '<div class="row">' +
+    '<div class="stat"><p>総重量(全期間)</p><p>' + formatInt(totalKg) + '<span class="unit">kg</span></p></div>' +
+    '<div class="stat"><p>換算</p><p style="font-size:20px;">' + tier.emoji + ' ' + round1(count) + '<span class="unit">' + escapeHtml(tier.name) + '分</span></p></div>' +
+    '</div>' +
+    '<p style="margin:12px 0 0;font-size:26px;line-height:1.4;word-break:break-all;">' + (stack || '<span style="color:var(--text-muted);font-size:15px;">まだ記録がありません</span>') + overflow + '</p>' +
+    nextHtml;
 }
 
 function onJourneySettingsChange() {
