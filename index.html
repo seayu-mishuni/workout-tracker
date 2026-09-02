@@ -586,20 +586,6 @@
       <select id="machine-new-part" style="margin-bottom:8px;"></select>
       <button class="secondary" onclick="addMachine()">＋ マシンを追加</button>
     </div>
-    <p class="field-label">インターバル（休憩）タイマー</p>
-    <div class="card">
-      <label class="field-label">セット間の休憩時間</label>
-      <select id="rest-seconds-select" onchange="saveRestSeconds()">
-        <option value="0">使わない</option>
-        <option value="30">30秒</option>
-        <option value="45">45秒</option>
-        <option value="60">60秒</option>
-        <option value="90">90秒</option>
-        <option value="120">2分</option>
-        <option value="180">3分</option>
-      </select>
-      <p style="font-size:14px;color:var(--text-muted);margin:8px 0 0;">プラン実行中に「次のセット」を押すと自動でカウントダウンします。</p>
-    </div>
     <p class="field-label">目標体重</p>
     <div class="card">
       <input type="number" step="0.1" min="0" id="target-weight-input" placeholder="目標体重 kg" style="margin-bottom:8px;">
@@ -3150,7 +3136,6 @@ function renderPlanRun() {
       counts[r.item.name] = (counts[r.item.name] || 0) + 1;
     });
     view.innerHTML =
-      '<div id="rest-slot"></div>' +
       '<div class="card">' +
       '<p class="field-label" style="margin-bottom:10px;">次はどの種目にしますか？</p>' +
       order.map(n => {
@@ -3161,7 +3146,6 @@ function renderPlanRun() {
       '<div class="card">' + queueListHtml + '</div>' +
       '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
       '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
-    renderRestBar();
     return;
   }
 
@@ -3200,7 +3184,6 @@ function renderPlanRun() {
     : '';
 
   view.innerHTML =
-    '<div id="rest-slot"></div>' +
     '<div class="card" style="border:2px solid var(--accent);">' +
     '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) +
     ' ・ 経過 ' + elapsedMin + '分</p>' +
@@ -3214,7 +3197,6 @@ function renderPlanRun() {
     '<div class="card">' + queueListHtml + '</div>' +
     '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
-  renderRestBar();
 }
 
 // 記録できたら true。入力も目標値も無く記録できなかったときは false を返す
@@ -3273,8 +3255,6 @@ function nextSet() {
   }
   saveActiveRun();
   renderPlanRun();
-  if (restSeconds > 0 && activeRun.currentIndex !== -1) startRest(restSeconds);
-  else stopRest();
 }
 
 // 種目名ではなくキュー上の位置で指定する（名前に引用符が含まれても壊れない）
@@ -3311,7 +3291,6 @@ function checkoutPlan() {
 }
 
 function finishPlan() {
-  stopRest();
   activeRun = null;
   saveActiveRun();
   showScreen('progress');
@@ -3321,8 +3300,6 @@ function quitPlan() {
   if (confirm('プランを中断しますか？')) finishPlan();
 }
 
-/* ---------- インターバル（休憩）タイマー ---------- */
-
 let targetWeight = store.get('targetWeight', null);
 
 function saveTargetWeight() {
@@ -3331,115 +3308,6 @@ function saveTargetWeight() {
   store.set('targetWeight', targetWeight);
   renderBody();
   alert(targetWeight != null ? '目標体重を保存しました' : '目標体重を解除しました');
-}
-
-let restSeconds = store.get('restSeconds', 60);
-let restEndsAt = null;
-let restIntervalId = null;
-let restDone = false;
-let restAudioCtx = null;
-
-function saveRestSeconds() {
-  restSeconds = parseInt(document.getElementById('rest-seconds-select').value, 10) || 0;
-  store.set('restSeconds', restSeconds);
-}
-
-function mmss(sec) {
-  return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
-}
-
-// iOSは操作直後でないと音を出せないので、AudioContext はタップ時に用意しておく
-function prepareAudio() {
-  try {
-    if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
-  } catch (e) {}
-}
-
-function beep() {
-  if (!restAudioCtx) return;
-  try {
-    [0, 0.25].forEach(offset => {
-      const osc = restAudioCtx.createOscillator(), gain = restAudioCtx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.value = 0.15;
-      osc.connect(gain);
-      gain.connect(restAudioCtx.destination);
-      osc.start(restAudioCtx.currentTime + offset);
-      osc.stop(restAudioCtx.currentTime + offset + 0.15);
-    });
-  } catch (e) {}
-}
-
-function startRest(sec) {
-  stopRestTimer();
-  restDone = false;
-  restEndsAt = Date.now() + sec * 1000;
-  prepareAudio();
-  restIntervalId = setInterval(tickRest, 250);
-  renderRestBar();
-}
-
-function stopRestTimer() {
-  if (restIntervalId) { clearInterval(restIntervalId); restIntervalId = null; }
-}
-
-function stopRest() {
-  stopRestTimer();
-  restEndsAt = null;
-  restDone = false;
-  renderRestBar();
-}
-
-function extendRest(sec) {
-  restEndsAt = Math.max(Date.now(), restEndsAt || Date.now()) + sec * 1000;
-  restDone = false;
-  if (!restIntervalId) restIntervalId = setInterval(tickRest, 250);
-  renderRestBar();
-}
-
-function tickRest() {
-  if (!restEndsAt) { stopRestTimer(); return; }
-  const el = document.getElementById('rest-remain');
-  if (!el) { stopRestTimer(); return; }
-  const left = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
-  if (left <= 0) {
-    stopRestTimer();
-    restEndsAt = null;
-    restDone = true;
-    beep();
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    renderRestBar();
-    return;
-  }
-  el.textContent = mmss(left);
-}
-
-// プラン実行画面を作り直しても消えないよう、専用の枠だけを書き換える
-function renderRestBar() {
-  const slot = document.getElementById('rest-slot');
-  if (!slot) return;
-  if (restDone) {
-    slot.innerHTML = '<div class="card" style="border:2px solid var(--accent);background:var(--accent-bg);">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
-      '<span style="font-size:19px;font-weight:800;color:var(--accent-text);">⏰ 休憩終了</span>' +
-      '<button class="ghost" style="width:auto;padding:4px 8px;" onclick="stopRest()">閉じる</button>' +
-      '</div></div>';
-    return;
-  }
-  if (!restEndsAt) { slot.innerHTML = ''; return; }
-  const left = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
-  slot.innerHTML = '<div class="card">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;">' +
-    '<span style="font-size:15px;color:var(--text-muted);font-weight:700;">休憩</span>' +
-    '<span id="rest-remain" style="font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;">' + mmss(left) + '</span>' +
-    '</div>' +
-    '<div class="row" style="margin-top:10px;">' +
-    '<button class="secondary" onclick="extendRest(30)">＋30秒</button>' +
-    '<button class="secondary" onclick="stopRest()">スキップ</button>' +
-    '</div></div>';
-  // 他の画面を見ている間に止まったカウントダウンを再開する
-  if (!restIntervalId) restIntervalId = setInterval(tickRest, 250);
 }
 
 /* ---------- マシン管理 ---------- */
@@ -3529,7 +3397,6 @@ function deleteMachine(id) {
 
 function openSettings() {
   renderMachineList();
-  document.getElementById('rest-seconds-select').value = String(restSeconds);
   document.getElementById('target-weight-input').value = targetWeight != null ? targetWeight : '';
   const partSel = document.getElementById('machine-new-part');
   if (!partSel.options.length) {
