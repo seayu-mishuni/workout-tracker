@@ -1213,7 +1213,7 @@ function autumnalEquinoxDay(year) {
   return Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
 }
 const FIXED_HOLIDAYS = { '1-1':1, '2-11':1, '2-23':1, '4-29':1, '5-3':1, '5-4':1, '5-5':1, '8-11':1, '11-3':1, '11-23':1 };
-function isJapaneseHoliday(year, month, day) {
+function isFixedJapaneseHoliday(year, month, day) {
   if (FIXED_HOLIDAYS[month + '-' + day]) return true;
   if (month === 1 && day === nthMondayOfMonth(year, 1, 2)) return true;
   if (month === 7 && day === nthMondayOfMonth(year, 7, 3)) return true;
@@ -1221,6 +1221,20 @@ function isJapaneseHoliday(year, month, day) {
   if (month === 10 && day === nthMondayOfMonth(year, 10, 2)) return true;
   if (month === 3 && day === vernalEquinoxDay(year)) return true;
   if (month === 9 && day === autumnalEquinoxDay(year)) return true;
+  return false;
+}
+// 前後を祝日に挟まれた平日は「国民の休日」となる（例: 敬老の日と秋分の日に挟まれた9/22）
+function isCitizensHoliday(year, month, day) {
+  const d = new Date(year, month - 1, day);
+  if (d.getDay() === 0 || isFixedJapaneseHoliday(year, month, day)) return false;
+  const prev = new Date(d); prev.setDate(prev.getDate() - 1);
+  const next = new Date(d); next.setDate(next.getDate() + 1);
+  return isFixedJapaneseHoliday(prev.getFullYear(), prev.getMonth() + 1, prev.getDate()) &&
+    isFixedJapaneseHoliday(next.getFullYear(), next.getMonth() + 1, next.getDate());
+}
+function isJapaneseHoliday(year, month, day) {
+  if (isFixedJapaneseHoliday(year, month, day)) return true;
+  if (isCitizensHoliday(year, month, day)) return true;
   return false;
 }
 function isHolidayOrSubstitute(dateStr) {
