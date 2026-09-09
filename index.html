@@ -2190,7 +2190,7 @@ function renderWeightChallenge() {
   el.innerHTML =
     '<div class="row">' +
     '<div class="stat"><p>総重量(全期間)</p><p>' + formatInt(totalKg) + '<span class="unit">kg</span></p></div>' +
-    '<div class="stat"><p>換算</p><p style="font-size:20px;">' + tier.emoji + ' ' + round1(count) + '<span class="unit">' + escapeHtml(tier.name) + '分</span></p></div>' +
+    '<div class="stat" style="min-width:0;"><p>換算</p><p style="font-size:20px;white-space:normal;word-break:break-word;">' + tier.emoji + ' ' + round1(count) + '<span class="unit">' + escapeHtml(tier.name) + '分</span></p></div>' +
     '</div>' +
     '<p style="margin:12px 0 0;font-size:26px;line-height:1.4;word-break:break-all;">' + (stack || '<span style="color:var(--text-muted);font-size:15px;">まだ記録がありません</span>') + overflow + '</p>' +
     nextHtml;
