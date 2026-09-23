@@ -1929,8 +1929,7 @@ function renderResultsStepsChart() {
 function journeyTreadmillKm() {
   let km = 0;
   workoutLogs.forEach(l => {
-    // 屋外ランは記録した距離をそのまま加算する
-    if (l.type === 'run') { l.sets.forEach(s => { km += s.distance || 0; }); return; }
+    // 屋外ランは歩数計の歩数に含まれるので加算しない（二重計上になるため）
     if (l.type !== 'cardio') return;
     l.sets.forEach(s => { if (s.duration && s.speed) km += s.speed * s.duration / 60; });
   });
