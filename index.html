@@ -1504,14 +1504,16 @@ function renderResultsSummary() {
   const lastDate = datesWithLogs[datesWithLogs.length - 1];
   if (lastDate) {
     const lastLogs = workoutLogs.filter(l => l.date === lastDate);
-    const lastRun = planHistory.filter(h => h.status === 'completed' && h.date === lastDate).pop();
+    // 同日にジムと屋外ランなど複数ある場合もすべて出す（記録タブで入れたランも含む）
+    const lastSessions = trainingSessions(monthKey(lastDate)).filter(h => h.date === lastDate);
     const lastKcal = estimateCalories(lastLogs, lastDate);
     const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
     const lastSetCount = lastLogs.reduce((s, l) => s + l.sets.length, 0);
     const lastHasCardio = lastLogs.some(l => l.type === 'cardio' || l.type === 'run');
     const chips = [
-      lastRun ? '<span class="mini-chip c-blue">⏱ ' + lastRun.durationMin + '分</span>' : '',
-      lastRun && lastRun.planName ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(lastRun.planName) + '</span>' : '',
+      lastSessions.length > 1
+        ? '<span class="mini-chip c-blue">⏱ 合計' + lastSessions.reduce((s, h) => s + h.durationMin, 0) + '分</span>' : '',
+      lastSessions.map(h => '<span class="mini-chip c-purple">📍 ' + escapeHtml(h.planName) + ' ' + h.durationMin + '分</span>').join(''),
       '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目 / ' + lastSetCount + 'セット</span>',
       '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>',
       lastHasCardio ? '<span class="mini-chip c-blue">🏃 有酸素</span>' : ''
