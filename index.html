@@ -289,6 +289,10 @@
           <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
         </div>
         <div class="row" style="margin-top:10px;">
+          <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ合計時間(ラン含む)</p><p id="res-total-duration">-</p></div>
+          <div class="stat"><p>🏃 月間ランニング(屋外)</p><p id="res-run-time">-</p><p id="res-run-note" style="font-size:13px;color:var(--text-muted);margin:2px 0 0;"></p></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
           <div class="stat"><p>消費カロリー(目安)</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
         </div>
@@ -528,6 +532,7 @@
       <button type="button" class="active" data-type="strength" onclick="setExType('strength')">筋トレ (重量×回数)</button>
       <button type="button" data-type="reps" onclick="setExType('reps')">回数のみ</button>
       <button type="button" data-type="cardio" onclick="setExType('cardio')">有酸素 (時間・スピード・傾斜)</button>
+      <button type="button" data-type="run" onclick="setExType('run')">屋外ラン (時間・距離)</button>
     </div>
     <div id="ex-sets"></div>
     <button class="secondary" style="margin-bottom:12px;" onclick="addSetRow()">＋ セットを追加</button>
@@ -543,7 +548,8 @@
     <input type="text" id="plan-title" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
     <datalist id="ex-name-history"></datalist>
     <div id="plan-exercises"></div>
-    <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
+    <button class="secondary" style="margin-bottom:8px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
+    <button class="secondary" style="margin-bottom:12px;" onclick="addPlanExerciseRow({ name: RUN_EXERCISE_NAME, type: 'run', setCount: 1 })">🏃 屋外ランニングを追加</button>
     <button class="primary" onclick="savePlan()">保存</button>
   </div>
 </div>
@@ -581,6 +587,7 @@
         <button type="button" class="active" data-type="strength" onclick="setNewMachineType('strength')">筋トレ</button>
         <button type="button" data-type="reps" onclick="setNewMachineType('reps')">回数のみ</button>
         <button type="button" data-type="cardio" onclick="setNewMachineType('cardio')">有酸素</button>
+        <button type="button" data-type="run" onclick="setNewMachineType('run')">屋外ラン</button>
       </div>
       <label class="field-label">部位</label>
       <select id="machine-new-part" style="margin-bottom:8px;"></select>
@@ -703,8 +710,10 @@ const DEFAULT_MACHINES = [
   { name: 'レッグプレス', type: 'strength', part: '脚' },
   { name: 'アダクション', type: 'strength', part: '脚' },
   { name: 'アブダクション', type: 'strength', part: '脚' },
-  { name: 'アブベンチ', type: 'reps', part: '腹' }
+  { name: 'アブベンチ', type: 'reps', part: '腹' },
+  { name: 'ランニング(屋外)', type: 'run', part: '有酸素' }
 ];
+const RUN_EXERCISE_NAME = 'ランニング(屋外)';
 
 // 500px-Japan_topographic_blank_map.jpg (500x683px) 上でクリック計測してキャリブレーションした座標。
 // 実際の緯度経度ではなく、この画像上のピクセル位置(px)を直接使う。
@@ -803,6 +812,10 @@ if (!machines) {
     machines.push({ id: uid(), name: 'レッグプレス', type: 'strength', part: '脚' });
     migrated = true;
   }
+  if (!machines.find(m => m.type === 'run')) {
+    machines.push({ id: uid(), name: RUN_EXERCISE_NAME, type: 'run', part: '有酸素' });
+    migrated = true;
+  }
   const defaultPartByName = {};
   DEFAULT_MACHINES.forEach(m => { defaultPartByName[m.name] = m.part; });
   machines.forEach(m => {
@@ -884,7 +897,7 @@ function summarizeLogs(logs) {
   let totalVolume = 0, totalSets = 0, totalCardioMin = 0, totalReps = 0;
   logs.forEach(l => l.sets.forEach(s => {
     totalSets += 1;
-    if (l.type === 'cardio') totalCardioMin += (s.duration || 0);
+    if (l.type === 'cardio' || l.type === 'run') totalCardioMin += (s.duration || 0);
     else if (l.type === 'reps') totalReps += (s.reps || 0);
     else totalVolume += s.weight * s.reps;
   }));
@@ -892,7 +905,7 @@ function summarizeLogs(logs) {
 }
 
 function badgeClassFor(type) {
-  if (type === 'cardio') return ' badge-cardio';
+  if (type === 'cardio' || type === 'run') return ' badge-cardio';
   if (type === 'reps') return ' badge-reps';
   return '';
 }
@@ -902,6 +915,7 @@ function exerciseCardsHtml(logs) {
   return logs.map(l => {
     const setsText = l.sets.map(s => {
       if (l.type === 'cardio') return (s.duration || 0) + '分' + (s.speed ? ' ・ ' + s.speed + 'km/h' : '') + (s.incline ? ' ・ 傾斜' + s.incline + '%' : '');
+      if (l.type === 'run') return (s.duration || 0) + '分' + (s.distance ? ' ・ ' + s.distance + 'km' : '');
       if (l.type === 'reps') return (s.reps || 0) + '回';
       return s.weight + 'kg × ' + s.reps;
     }).join(' / ');
@@ -1042,6 +1056,12 @@ function addSetRow(prefill) {
       '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
       '<input type="number" step="0.1" class="set-speed" placeholder="スピードkm/h" value="' + prevSpeed + '">' +
       '<input type="number" step="0.5" class="set-incline" placeholder="傾斜%(任意)" value="' + prevIncline + '">' + delBtn;
+  } else if (exCurrentType === 'run') {
+    const prevDuration = prefill ? (prefill.duration != null ? prefill.duration : '') : (prevRow ? prevRow.querySelector('.set-duration').value : '');
+    const prevDistance = prefill ? (prefill.distance != null ? prefill.distance : '') : (prevRow ? prevRow.querySelector('.set-distance').value : '');
+    row.innerHTML = '<span class="set-label">セット' + idx + '</span>' +
+      '<input type="number" step="1" class="set-duration" placeholder="時間(分)" value="' + prevDuration + '">' +
+      '<input type="number" step="0.01" class="set-distance" placeholder="距離km(任意)" value="' + prevDistance + '">' + delBtn;
   } else if (exCurrentType === 'reps') {
     const prevReps = prefill ? (prefill.reps != null ? prefill.reps : '') : (prevRow ? prevRow.querySelector('.set-reps-only').value : '');
     row.innerHTML = '<span class="set-label">セット' + idx + '</span>' +
@@ -1089,6 +1109,12 @@ function saveExercise() {
       const speed = parseFloat(r.querySelector('.set-speed').value);
       const incline = parseFloat(r.querySelector('.set-incline').value);
       if (!isNaN(duration)) sets.push({ duration: duration, speed: isNaN(speed) ? null : speed, incline: isNaN(incline) ? null : incline });
+    });
+  } else if (exCurrentType === 'run') {
+    rows.forEach(r => {
+      const duration = parseFloat(r.querySelector('.set-duration').value);
+      const distance = parseFloat(r.querySelector('.set-distance').value);
+      if (!isNaN(duration)) sets.push({ duration: duration, distance: isNaN(distance) ? null : distance });
     });
   } else if (exCurrentType === 'reps') {
     rows.forEach(r => {
@@ -1149,7 +1175,7 @@ function allExerciseNames() {
   return [...new Set(workoutLogs.map(l => l.exercise))].sort();
 }
 
-function isStrengthLog(l) { return l.type !== 'cardio' && l.type !== 'reps'; }
+function isStrengthLog(l) { return l.type !== 'cardio' && l.type !== 'reps' && l.type !== 'run'; }
 
 // 指定日より前に記録された、その種目の直近の記録を返す（プラン実行時に前回実績を出すため）
 function lastLogBefore(name, beforeDate) {
@@ -1162,6 +1188,7 @@ function formatLogSets(log) {
   if (!log) return null;
   return log.sets.map(s => {
     if (log.type === 'cardio') return (s.duration || 0) + '分' + (s.speed ? ' / ' + s.speed + 'km/h' : '');
+    if (log.type === 'run') return (s.duration || 0) + '分' + (s.distance ? ' / ' + s.distance + 'km' : '');
     if (log.type === 'reps') return (s.reps || 0) + '回';
     return s.weight + 'kg × ' + s.reps;
   }).join(' / ');
@@ -1260,7 +1287,8 @@ function renderResultsCalendar() {
   });
   const scheduledByDay = {};
   scheduledPlans.forEach(s => {
-    if (monthKey(s.date) === calendarViewMonth) scheduledByDay[s.date] = s;
+    // 同日に複数の予定がある場合は未実施のものを優先して印を付ける
+    if (monthKey(s.date) === calendarViewMonth && (!scheduledByDay[s.date] || scheduledByDay[s.date].completed)) scheduledByDay[s.date] = s;
   });
 
   document.getElementById('res-calendar-label').textContent = y + '年' + m + '月';
@@ -1328,11 +1356,14 @@ function renderTodayPlanCard() {
     { label: '今日', date: today },
     { label: next ? (next.date === tomorrow ? '明日' : fmtDateLabel(next.date)) : '次の予定', date: next ? next.date : null }
   ].map(d => {
-    const s = d.date ? scheduledPlans.find(x => x.date === d.date) : null;
-    const plan = s ? plans.find(p => p.id === s.planId) : null;
-    return { label: d.label, s, plan };
+    // 同じ日に複数の予定（ジム＋屋外ランなど）を持てるので、その日の予定をすべて並べる
+    const items = d.date ? scheduledPlans
+      .filter(x => x.date === d.date)
+      .map(s => ({ s, plan: plans.find(p => p.id === s.planId) }))
+      .filter(x => x.plan) : [];
+    return { label: d.label, items };
   });
-  el.style.border = entries.some(e => e.plan) ? '2px solid var(--accent)' : '';
+  el.style.border = entries.some(e => e.items.length) ? '2px solid var(--accent)' : '';
   el.innerHTML =
     '<p class="field-label" style="margin-bottom:10px;">📅 今日・次の予定</p>' +
     entries.map((e, i) => {
@@ -1341,30 +1372,32 @@ function renderTodayPlanCard() {
       const dayChip = i === 0
         ? '<span class="mini-chip c-green" style="font-size:13px;">🔵 今日</span>'
         : '<span class="mini-chip" style="font-size:13px;">🔷 ' + e.label + '</span>';
-      if (!e.plan) {
+      if (e.items.length === 0) {
         return divider + '<p style="margin:0 0 ' + (last ? '0' : '12px') + ';">' + dayChip +
           '<span style="font-size:15px;color:var(--text-muted);margin-left:8px;">予定はありません</span></p>';
       }
-      const isRunning = i === 0 && activeRun && activeRun.scheduleDate === e.s.date;
-      const showCheckin = i === 0 && !e.s.completed && !activeRun;
-      const showCheckout = isRunning;
-      let footer = '';
-      if (showCheckin) {
-        footer = '<button class="primary" onclick="openStartPlanModal(\'' + e.plan.id + '\', \'' + e.s.date + '\')">🏋 チェックイン</button>';
-      } else if (showCheckout) {
-        const elapsedMin = Math.round((Date.now() - activeRun.startedAt) / 60000);
-        footer = '<p style="margin:0 0 8px;"><span class="mini-chip c-green">🏃 トレ中 ・ 経過' + elapsedMin + '分</span></p>' +
-          '<button class="primary" onclick="checkoutPlan()">🚪 チェックアウト</button>';
-      }
-      return divider +
-        '<div style="margin-bottom:' + (last ? '0' : '12px') + ';">' +
-        '<p style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
-        dayChip +
-        '<span style="font-weight:800;font-size:19px;min-width:0;overflow-wrap:break-word;">' + escapeHtml(e.plan.name) + '</span>' +
-        (e.s.completed ? '<span class="badge">実施済</span>' : '') +
-        '</p>' +
-        footer +
-        '</div>';
+      return divider + e.items.map((it, j) => {
+        const isRunning = i === 0 && activeRun && activeRun.scheduleDate === it.s.date &&
+          (activeRun.planId ? activeRun.planId === it.s.planId : j === 0);
+        const showCheckin = i === 0 && !it.s.completed && !activeRun;
+        let footer = '';
+        if (showCheckin) {
+          footer = '<button class="primary" onclick="openStartPlanModal(\'' + it.plan.id + '\', \'' + it.s.date + '\')">🏋 チェックイン</button>';
+        } else if (isRunning) {
+          const elapsedMin = Math.round((Date.now() - activeRun.startedAt) / 60000);
+          footer = '<p style="margin:0 0 8px;"><span class="mini-chip c-green">🏃 トレ中 ・ 経過' + elapsedMin + '分</span></p>' +
+            '<button class="primary" onclick="checkoutPlan()">🚪 チェックアウト</button>';
+        }
+        const lastItem = last && j === e.items.length - 1;
+        return '<div style="margin-bottom:' + (lastItem ? '0' : '12px') + ';">' +
+          '<p style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
+          (j === 0 ? dayChip : '') +
+          '<span style="font-weight:800;font-size:19px;min-width:0;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
+          (it.s.completed ? '<span class="badge">実施済</span>' : '') +
+          '</p>' +
+          footer +
+          '</div>';
+      }).join('');
     }).join('');
 }
 
@@ -1445,14 +1478,25 @@ function renderResultsSummary() {
     vsEl.textContent = '-';
   }
 
-  const historyThisMonth = planHistory.filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth);
+  const historyThisMonth = trainingSessions(thisMonth);
   const avgEl = document.getElementById('res-avg-duration');
+  const totalEl = document.getElementById('res-total-duration');
   if (historyThisMonth.length > 0) {
-    const avgMin = Math.round(historyThisMonth.reduce((s, h) => s + h.durationMin, 0) / historyThisMonth.length);
-    avgEl.innerHTML = avgMin + '<span class="unit">分</span>';
+    const totalMin = historyThisMonth.reduce((s, h) => s + h.durationMin, 0);
+    avgEl.innerHTML = Math.round(totalMin / historyThisMonth.length) + '<span class="unit">分</span>';
+    totalEl.innerHTML = formatMinutes(totalMin);
   } else {
     avgEl.textContent = '-';
+    totalEl.textContent = '-';
   }
+
+  const runLogs = logsThisMonth.filter(l => l.type === 'run');
+  let runMin = 0, runKm = 0;
+  runLogs.forEach(l => l.sets.forEach(s => { runMin += s.duration || 0; runKm += s.distance || 0; }));
+  document.getElementById('res-run-time').innerHTML = runLogs.length ? formatMinutes(runMin) : '-';
+  document.getElementById('res-run-note').textContent = runLogs.length
+    ? round1(runKm) + 'km ・ ' + new Set(runLogs.map(l => l.date)).size + '日'
+    : '';
 
   // プラン実行の履歴ではなく記録そのものを基準にする（手動で記録した日も表示される）
   const lastEl = document.getElementById('res-last-training');
@@ -1464,7 +1508,7 @@ function renderResultsSummary() {
     const lastKcal = estimateCalories(lastLogs, lastDate);
     const lastExCount = new Set(lastLogs.map(l => l.exercise)).size;
     const lastSetCount = lastLogs.reduce((s, l) => s + l.sets.length, 0);
-    const lastHasCardio = lastLogs.some(l => l.type === 'cardio');
+    const lastHasCardio = lastLogs.some(l => l.type === 'cardio' || l.type === 'run');
     const chips = [
       lastRun ? '<span class="mini-chip c-blue">⏱ ' + lastRun.durationMin + '分</span>' : '',
       lastRun && lastRun.planName ? '<span class="mini-chip c-purple">📍 ' + escapeHtml(lastRun.planName) + '</span>' : '',
@@ -1486,20 +1530,45 @@ function openDurationHistory() {
 function renderDurationHistory() {
   const thisMonth = calendarViewMonth || currentMonthKey();
   document.getElementById('duration-history-title').textContent = monthLabel(thisMonth) + 'のトレ時間';
-  const historyThisMonth = planHistory
-    .filter(h => h.status === 'completed' && monthKey(h.date) === thisMonth)
+  const historyThisMonth = trainingSessions(thisMonth)
     .sort((a, b) => b.date.localeCompare(a.date));
   const listEl = document.getElementById('duration-history-list');
   if (historyThisMonth.length === 0) {
     listEl.innerHTML = '<p style="padding:12px;color:var(--text-muted);">この月の記録はまだありません。</p>';
     return;
   }
+  // 記録タブで登録したランは記録側で編集・削除する（ここでは表示のみ）
   listEl.innerHTML = historyThisMonth.map(h =>
     '<div class="list-item" style="padding:12px;">' +
       '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分</p></div>' +
-      '<span style="color:var(--coral);cursor:pointer;" onclick="deleteDurationHistory(\'' + h.id + '\')">削除</span>' +
+      (h.kind === 'run'
+        ? '<span style="color:var(--text-muted);font-size:13px;">記録から</span>'
+        : '<span style="color:var(--coral);cursor:pointer;" onclick="deleteDurationHistory(\'' + h.id + '\')">削除</span>') +
     '</div>'
   ).join('');
+}
+
+// その月のトレ時間の一覧。チェックイン〜チェックアウトの履歴に加え、
+// プラン外で記録した屋外ランの時間も日ごとに1件として含める（プラン中の記録は滞在時間に含まれるので除外）
+function trainingSessions(mk) {
+  const list = planHistory
+    .filter(h => h.status === 'completed' && monthKey(h.date) === mk)
+    .map(h => Object.assign({ kind: 'plan' }, h));
+  const runByDate = {};
+  workoutLogs.forEach(l => {
+    if (l.type !== 'run' || l.runId || monthKey(l.date) !== mk) return;
+    runByDate[l.date] = (runByDate[l.date] || 0) + l.sets.reduce((s, x) => s + (x.duration || 0), 0);
+  });
+  Object.keys(runByDate).forEach(date => {
+    if (runByDate[date] > 0) list.push({ id: 'run-' + date, kind: 'run', planName: '🏃 ランニング(記録)', date, durationMin: Math.round(runByDate[date]) });
+  });
+  return list;
+}
+
+function formatMinutes(min) {
+  const m = Math.round(min);
+  if (m < 60) return m + '<span class="unit">分</span>';
+  return Math.floor(m / 60) + '<span class="unit">時間</span>' + (m % 60) + '<span class="unit">分</span>';
 }
 function deleteDurationHistory(id) {
   if (!confirm('この記録を削除しますか？')) return;
@@ -1564,12 +1633,13 @@ function latestWeightKg(onOrBeforeDate) {
   return candidate.weight;
 }
 
-const MET = { strength: 5, reps: 4, cardio: 8 };
+const MET = { strength: 5, reps: 4, cardio: 8, run: 9 };
 function estimateCalories(logs, refDate) {
   const w = latestWeightKg(refDate);
   let kcal = 0;
   logs.forEach(l => l.sets.forEach(s => {
-    if (l.type === 'cardio') kcal += MET.cardio * 3.5 * w / 200 * (s.duration || 0);
+    if (l.type === 'run') kcal += MET.run * 3.5 * w / 200 * (s.duration || 0);
+    else if (l.type === 'cardio') kcal += MET.cardio * 3.5 * w / 200 * (s.duration || 0);
     else if (l.type === 'reps') kcal += MET.reps * 3.5 * w / 200;
     else kcal += MET.strength * 3.5 * w / 200;
   }));
@@ -1628,6 +1698,7 @@ function computeBests() {
     logs.forEach(l => {
       let val;
       if (l.type === 'cardio') { val = Math.max(...l.sets.map(s => s.speed || 0)); unit = 'km/h'; }
+      else if (l.type === 'run') { val = l.sets.reduce((sum, s) => sum + (s.distance || 0), 0); unit = 'km'; }
       else if (l.type === 'reps') { val = Math.max(...l.sets.map(s => s.reps)); unit = '回'; }
       else { val = Math.max(...l.sets.map(s => s.weight)); unit = 'kg'; }
       if (val > bestVal) { bestVal = val; bestDate = l.date; }
@@ -1685,12 +1756,12 @@ function exTrendSeries(name, days) {
   const oneRmByDate = new Map();
   logs.forEach(l => {
     let val;
-    if (type === 'cardio') val = l.sets.reduce((s, x) => s + (x.duration || 0), 0);
+    if (type === 'cardio' || type === 'run') val = l.sets.reduce((s, x) => s + (x.duration || 0), 0);
     else if (type === 'reps') val = Math.max(...l.sets.map(s => s.reps || 0));
     else val = Math.max(...l.sets.map(s => s.weight || 0));
     const cur = byDate.get(l.date);
     if (cur == null) byDate.set(l.date, val);
-    else byDate.set(l.date, type === 'cardio' ? cur + val : Math.max(cur, val));
+    else byDate.set(l.date, (type === 'cardio' || type === 'run') ? cur + val : Math.max(cur, val));
     if (type === 'strength') {
       const bestOneRm = Math.max(...l.sets.map(s => estimateOneRm(s.weight || 0, s.reps || 0)));
       oneRmByDate.set(l.date, Math.max(oneRmByDate.get(l.date) || 0, bestOneRm));
@@ -1698,8 +1769,8 @@ function exTrendSeries(name, days) {
   });
   return {
     points: [...byDate.entries()].map(([date, value]) => ({ date, value: round1(value) })),
-    unit: type === 'cardio' ? '分' : type === 'reps' ? '回' : 'kg',
-    metric: type === 'cardio' ? '合計時間' : type === 'reps' ? '最大回数' : '最大重量',
+    unit: (type === 'cardio' || type === 'run') ? '分' : type === 'reps' ? '回' : 'kg',
+    metric: (type === 'cardio' || type === 'run') ? '合計時間' : type === 'reps' ? '最大回数' : '最大重量',
     oneRm: type === 'strength'
       ? [...oneRmByDate.entries()].map(([date, value]) => ({ date, value: round1(value) }))
       : null
@@ -1856,6 +1927,8 @@ function renderResultsStepsChart() {
 function journeyTreadmillKm() {
   let km = 0;
   workoutLogs.forEach(l => {
+    // 屋外ランは記録した距離をそのまま加算する
+    if (l.type === 'run') { l.sets.forEach(s => { km += s.distance || 0; }); return; }
     if (l.type !== 'cardio') return;
     l.sets.forEach(s => { if (s.duration && s.speed) km += s.speed * s.duration / 60; });
   });
@@ -2865,8 +2938,14 @@ function onPlanExNameInput(input) {
 function renderPlanExFields(row, type, prefill) {
   row.dataset.type = type;
   const fields = row.querySelector('.plan-ex-fields');
-  const setCount = prefill ? prefill.setCount : (type === 'cardio' ? 1 : 3);
-  if (type === 'cardio') {
+  const setCount = prefill ? prefill.setCount : (type === 'cardio' || type === 'run' ? 1 : 3);
+  if (type === 'run') {
+    fields.innerHTML = '<div class="row">' +
+      '<input type="number" class="plan-ex-setcount" placeholder="回数" value="' + setCount + '">' +
+      '<input type="number" step="1" class="plan-ex-duration" placeholder="目標時間(分)" value="' + (prefill && prefill.duration ? prefill.duration : '') + '">' +
+      '<input type="number" step="0.1" class="plan-ex-distance" placeholder="目標距離km" value="' + (prefill && prefill.distance ? prefill.distance : '') + '">' +
+      '</div>';
+  } else if (type === 'cardio') {
     fields.innerHTML = '<div class="row">' +
       '<input type="number" class="plan-ex-setcount" placeholder="セット数" value="' + setCount + '">' +
       '<input type="number" step="1" class="plan-ex-duration" placeholder="目標時間(分)" value="' + (prefill && prefill.duration ? prefill.duration : '') + '">' +
@@ -2901,7 +2980,11 @@ function savePlan() {
     if (!exName) return;
     const type = r.dataset.type;
     const setCount = parseInt(r.querySelector('.plan-ex-setcount').value, 10) || 1;
-    if (type === 'cardio') {
+    if (type === 'run') {
+      const duration = parseFloat(r.querySelector('.plan-ex-duration').value) || 0;
+      const distance = parseFloat(r.querySelector('.plan-ex-distance').value) || 0;
+      exercises.push({ name: exName, type, setCount, duration, distance });
+    } else if (type === 'cardio') {
       const duration = parseFloat(r.querySelector('.plan-ex-duration').value) || 0;
       const speed = parseFloat(r.querySelector('.plan-ex-speed').value) || 0;
       const incline = parseFloat(r.querySelector('.plan-ex-incline').value) || 0;
@@ -2977,15 +3060,16 @@ function renderScheduleList() {
   el.innerHTML = upcoming.map(s => {
     const plan = plans.find(p => p.id === s.planId);
     const isToday = s.date === today;
+    const isRunningThis = activeRun && activeRun.scheduleDate === s.date && activeRun.planId === s.planId;
     return '<div class="card" style="' + (isToday ? 'border:2px solid var(--accent);' : '') + '">' +
       '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
       '<span style="font-size:16px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + '</span>' +
-      '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\')">削除</span>' +
+      '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\', \'' + s.planId + '\')">削除</span>' +
       '</div>' +
       '<p style="font-weight:600;font-size:18px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
       (isToday ? (s.completed
         ? '<span class="badge" style="display:inline-block;">実施済</span>'
-        : '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\', \'' + s.date + '\')">開始</button>') : '') +
+        : isRunningThis ? '' : '<button class="primary" onclick="openStartPlanModal(\'' + plan.id + '\', \'' + s.date + '\')">開始</button>') : '') +
       '</div>';
   }).join('');
 }
@@ -3003,15 +3087,11 @@ function openSchedulePlan(planId) {
 function saveSchedule() {
   const date = document.getElementById('schedule-date-input').value;
   if (!date) { alert('日付を選択してください'); return; }
-  const existing = scheduledPlans.find(s => s.date === date);
-  if (existing) {
-    const existingPlan = plans.find(p => p.id === existing.planId);
-    const msg = existingPlan
-      ? fmtDateLabel(date) + 'にはすでに「' + existingPlan.name + '」の予定があります。上書きしますか？'
-      : fmtDateLabel(date) + 'の予定を上書きしますか？';
-    if (!confirm(msg)) return;
+  // 同じ日に別のプラン（ジム＋屋外ランなど）を追加できる。同じプランの重複だけ防ぐ
+  if (scheduledPlans.some(s => s.date === date && s.planId === scheduleTargetPlanId)) {
+    alert(fmtDateLabel(date) + 'にはすでにこのプランの予定があります');
+    return;
   }
-  scheduledPlans = scheduledPlans.filter(s => s.date !== date);
   scheduledPlans.push({ date, planId: scheduleTargetPlanId });
   saveScheduledPlans();
   closeModal('modal-schedule-plan');
@@ -3026,9 +3106,10 @@ function cleanupStaleSchedules() {
   if (scheduledPlans.length !== before) saveScheduledPlans();
 }
 
-function removeSchedule(date) {
-  if (!confirm(fmtDateLabel(date) + 'の予定を削除しますか？')) return;
-  scheduledPlans = scheduledPlans.filter(s => s.date !== date);
+function removeSchedule(date, planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!confirm(fmtDateLabel(date) + 'の予定' + (plan ? '「' + plan.name + '」' : '') + 'を削除しますか？')) return;
+  scheduledPlans = scheduledPlans.filter(s => !(s.date === date && s.planId === planId));
   saveScheduledPlans();
   renderScheduleList();
 }
@@ -3098,7 +3179,9 @@ function startPlan(id, selectedIndexes, scheduleDate) {
   exercisesToUse.forEach(ex => {
     const type = ex.type || 'strength';
     for (let i = 0; i < ex.setCount; i++) {
-      if (type === 'cardio') {
+      if (type === 'run') {
+        queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, duration: ex.duration, distance: ex.distance });
+      } else if (type === 'cardio') {
         queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, duration: ex.duration, speed: ex.speed, incline: ex.incline });
       } else if (type === 'reps') {
         queue.push({ name: ex.name, type, setIndex: i + 1, totalSets: ex.setCount, reps: ex.reps });
@@ -3108,7 +3191,7 @@ function startPlan(id, selectedIndexes, scheduleDate) {
     }
   });
   // 開始日を保持しておく。日付を跨いで再開しても記録先が翌日にずれないようにする
-  activeRun = { planName: plan.name, queue, doneIndices: [], currentIndex: 0, startedAt: Date.now(), date: scheduleDate || todayStr(), scheduleDate: scheduleDate || null };
+  activeRun = { planId: plan.id, planName: plan.name, queue, skippedIndices: [], doneIndices: [], currentIndex: 0, startedAt: Date.now(), date: scheduleDate || todayStr(), scheduleDate: scheduleDate || null };
   saveActiveRun();
   renderPlanScreen();
 }
@@ -3124,7 +3207,11 @@ function renderPlanRun() {
   view.style.display = 'block';
 
   const doneSet = new Set(activeRun.doneIndices);
+  const skippedSet = new Set(activeRun.skippedIndices || []);
   const queueListHtml = activeRun.queue.map((item, i) => {
+    if (skippedSet.has(i)) {
+      return '<div class="list-item"><span style="color:var(--text-muted);">–</span><div class="lt"><p style="text-decoration:line-through;color:var(--text-muted);">' + escapeHtml(item.name) + ' セット' + item.setIndex + '（スキップ）</p></div></div>';
+    }
     if (doneSet.has(i)) {
       return '<div class="list-item"><span style="color:var(--green);">✓</span><div class="lt"><p style="text-decoration:line-through;color:var(--text-muted);">' + escapeHtml(item.name) + ' セット' + item.setIndex + '</p></div></div>';
     }
@@ -3136,7 +3223,7 @@ function renderPlanRun() {
 
   if (activeRun.currentIndex === -1) {
     view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;margin-bottom:14px;">プラン完了 🎉</p>' +
-      '<button class="primary" onclick="showScreen(\'progress\')">✅ プラン終了</button></div>' +
+      '<button class="primary" onclick="completePlanRun()">✅ プラン終了（チェックアウト）</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
   }
@@ -3154,11 +3241,14 @@ function renderPlanRun() {
       '<p class="field-label" style="margin-bottom:10px;">次はどの種目にしますか？</p>' +
       order.map(n => {
         const first = remaining.find(r => r.item.name === n);
-        return '<button class="secondary" style="margin-bottom:8px;" onclick="chooseNextExercise(' + first.i + ')">' + escapeHtml(n) + ' (残り' + counts[n] + 'セット)</button>';
+        return '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+          '<button class="secondary" style="flex:1;" onclick="chooseNextExercise(' + first.i + ')">' + escapeHtml(n) + ' (残り' + counts[n] + 'セット)</button>' +
+          '<button class="ghost" style="width:auto;flex-shrink:0;" onclick="skipExercise(' + first.i + ')">スキップ</button>' +
+          '</div>';
       }).join('') +
       '</div>' +
       '<div class="card">' + queueListHtml + '</div>' +
-      '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
+      '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 ここで終了（チェックアウト）</button>' +
       '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
     return;
   }
@@ -3166,7 +3256,13 @@ function renderPlanRun() {
   const cur = activeRun.queue[activeRun.currentIndex];
 
   let targetText, actualFieldsHtml;
-  if (cur.type === 'cardio') {
+  if (cur.type === 'run') {
+    targetText = (cur.duration || cur.distance) ? ' ・ 目標 ' + [cur.duration ? cur.duration + '分' : '', cur.distance ? cur.distance + 'km' : ''].filter(Boolean).join(' / ') : '';
+    actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
+      '<input type="number" step="1" id="run-actual-1" placeholder="時間(分)" value="' + (cur.duration || '') + '">' +
+      '<input type="number" step="0.01" id="run-actual-2" placeholder="距離km" value="' + (cur.distance || '') + '">' +
+      '</div>';
+  } else if (cur.type === 'cardio') {
     targetText = cur.duration ? ' ・ 目標 ' + cur.duration + '分' + (cur.speed ? ' / ' + cur.speed + 'km/h' : '') + (cur.incline ? ' / 傾斜' + cur.incline + '%' : '') : '';
     actualFieldsHtml = '<div class="row" style="margin-bottom:10px;">' +
       '<input type="number" step="1" id="run-actual-1" placeholder="時間(分)" value="' + (cur.duration || '') + '">' +
@@ -3207,9 +3303,10 @@ function renderPlanRun() {
     '<label class="field-label">実際の記録</label>' +
     actualFieldsHtml +
     '<button class="primary" onclick="nextSet()">次のセット</button>' +
+    '<button class="ghost" style="margin-top:8px;" onclick="skipExercise(' + activeRun.currentIndex + ')">⏭ この種目の残りをスキップ</button>' +
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
-    '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 チェックアウト</button>' +
+    '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 ここで終了（チェックアウト）</button>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
 }
 
@@ -3222,7 +3319,11 @@ function recordCurrentSet() {
   const a2 = parseFloat(document.getElementById('run-actual-2')?.value);
   const a3 = parseFloat(document.getElementById('run-actual-3')?.value);
   let set;
-  if (cur.type === 'cardio') {
+  if (cur.type === 'run') {
+    const duration = !isNaN(a1) ? a1 : cur.duration;
+    if (!duration) return false;
+    set = { duration: duration, distance: !isNaN(a2) ? a2 : (cur.distance || null) };
+  } else if (cur.type === 'cardio') {
     const duration = !isNaN(a1) ? a1 : cur.duration;
     if (!duration) return false;
     set = { duration: duration, speed: !isNaN(a2) ? a2 : (cur.speed || null), incline: !isNaN(a3) ? a3 : (cur.incline || null) };
@@ -3237,9 +3338,10 @@ function recordCurrentSet() {
     set = { weight: weight || 0, reps: reps || 0 };
   }
   const t = activeRun.date || todayStr();
-  let entry = workoutLogs.find(l => l.date === t && l.exercise === cur.name && l.type === cur.type);
+  // runId でこのチェックイン中の記録だと分かるようにする（トレ時間の二重計上を防ぐため）
+  let entry = workoutLogs.find(l => l.date === t && l.exercise === cur.name && l.type === cur.type && l.runId === activeRun.startedAt);
   if (!entry) {
-    entry = { id: uid(), date: t, exercise: cur.name, type: cur.type, sets: [] };
+    entry = { id: uid(), date: t, exercise: cur.name, type: cur.type, sets: [], runId: activeRun.startedAt };
     workoutLogs.push(entry);
   }
   entry.sets.push(set);
@@ -3254,7 +3356,21 @@ function nextSet() {
   }
   const finishedName = activeRun.queue[activeRun.currentIndex].name;
   activeRun.doneIndices.push(activeRun.currentIndex);
+  advanceAfter(finishedName);
+}
 
+// 種目の残りセットを記録せずに消化扱いにする（今日はやらない種目があっても終了できるように）
+function skipExercise(queueIndex) {
+  if (!activeRun || !activeRun.queue[queueIndex]) return;
+  const name = activeRun.queue[queueIndex].name;
+  const targets = remainingQueueItems().filter(r => r.item.name === name);
+  if (!confirm('「' + name + '」の残り' + targets.length + 'セットをスキップしますか？')) return;
+  if (!activeRun.skippedIndices) activeRun.skippedIndices = [];
+  targets.forEach(r => { activeRun.doneIndices.push(r.i); activeRun.skippedIndices.push(r.i); });
+  advanceAfter(name);
+}
+
+function advanceAfter(finishedName) {
   const remaining = remainingQueueItems();
   if (remaining.length === 0) {
     activeRun.currentIndex = -1;
@@ -3283,6 +3399,11 @@ function chooseNextExercise(queueIndex) {
 function completePlanRun() {
   // チェックインから終了ボタンを押すまでの滞在時間として記録する
   let durationMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
+  // 屋外ランを走り終えてからまとめて入力した場合でも、記録したラン時間は下回らないようにする
+  const runMin = workoutLogs
+    .filter(l => l.type === 'run' && l.runId === activeRun.startedAt)
+    .reduce((sum, l) => sum + l.sets.reduce((s, x) => s + (x.duration || 0), 0), 0);
+  durationMin = Math.max(durationMin, Math.round(runMin));
   const MAX_DURATION_MIN = 300;
   if (durationMin > MAX_DURATION_MIN) {
     alert('開始から' + durationMin + '分経過していたため、記録時間を' + MAX_DURATION_MIN + '分として保存します。\n実際と違う場合は「トレ平均時間」から削除できます。');
@@ -3291,7 +3412,9 @@ function completePlanRun() {
   planHistory.push({ id: uid(), planName: activeRun.planName, date: activeRun.date || todayStr(), durationMin, status: 'completed' });
   savePlanHistory();
   if (activeRun.scheduleDate) {
-    const sched = scheduledPlans.find(s => s.date === activeRun.scheduleDate);
+    // 同日に複数の予定があるので、実行中のプランの予定だけ実施済にする（planId の無い旧データは先頭の未実施）
+    const sched = scheduledPlans.find(s => s.date === activeRun.scheduleDate &&
+      (activeRun.planId ? s.planId === activeRun.planId : !s.completed));
     if (sched) { sched.completed = true; saveScheduledPlans(); }
   }
   finishPlan();
@@ -3300,7 +3423,7 @@ function completePlanRun() {
 // 全セットを消化していなくても、その時点までの滞在時間として記録して終了する
 function checkoutPlan() {
   const remaining = activeRun.queue.length - activeRun.doneIndices.length;
-  if (remaining > 0 && !confirm('残り' + remaining + 'セットが未実施です。ここでチェックアウトしますか？')) return;
+  if (remaining > 0 && !confirm('未実施の' + remaining + 'セットを残して終了し、トレ時間を記録します。よろしいですか？')) return;
   completePlanRun();
 }
 
@@ -3380,6 +3503,7 @@ function renameMachine(id) {
 
 function typeLabel(type) {
   if (type === 'cardio') return '有酸素';
+  if (type === 'run') return '屋外ラン';
   if (type === 'reps') return '回数のみ';
   return '筋トレ';
 }
@@ -3472,8 +3596,8 @@ function importData(event) {
         data.plans.forEach(p => { if (!existingPlanIds.has(p.id)) plans.push(p); });
         const existingMachineNames = new Set(machines.map(m => m.name));
         (data.machines || []).forEach(m => { if (!existingMachineNames.has(m.name)) machines.push(m); });
-        const existingScheduleDates = new Set(scheduledPlans.map(s => s.date));
-        (data.scheduledPlans || []).forEach(s => { if (!existingScheduleDates.has(s.date)) scheduledPlans.push(s); });
+        const existingScheduleKeys = new Set(scheduledPlans.map(s => s.date + '|' + s.planId));
+        (data.scheduledPlans || []).forEach(s => { if (!existingScheduleKeys.has(s.date + '|' + s.planId)) scheduledPlans.push(s); });
         const existingHistoryIds = new Set(planHistory.map(h => h.id));
         (data.planHistory || []).forEach(h => { if (!existingHistoryIds.has(h.id)) planHistory.push(h); });
       } else {
