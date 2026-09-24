@@ -3237,8 +3237,14 @@ function renderPlanRun() {
   }).join('');
 
   if (activeRun.currentIndex === -1) {
-    view.innerHTML = '<div class="card"><p style="text-align:center;font-size:19px;font-weight:600;margin-bottom:14px;">プラン完了 🎉</p>' +
-      '<button class="primary" onclick="completePlanRun()">✅ プラン終了（チェックアウト）</button></div>' +
+    // プラン終了 → トレ時間を確認 → チェックアウトで記録、の2段階にする
+    const doneElapsedMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
+    const skippedCount = (activeRun.skippedIndices || []).length;
+    view.innerHTML = '<div class="card" style="border:2px solid var(--accent);"><p style="text-align:center;font-size:19px;font-weight:600;margin-bottom:6px;">プラン終了 🎉</p>' +
+      '<p style="text-align:center;font-size:16px;color:var(--text-secondary);margin:0 0 4px;">' + escapeHtml(activeRun.planName) + '</p>' +
+      '<p style="text-align:center;font-size:28px;font-weight:800;margin:0 0 4px;">⏱ ' + doneElapsedMin + '<span class="unit">分</span></p>' +
+      '<p style="text-align:center;font-size:14px;color:var(--text-muted);margin:0 0 14px;">トレ時間（チェックインから）' + (skippedCount ? ' ・ スキップ' + skippedCount + 'セット' : '') + '</p>' +
+      '<button class="primary" onclick="completePlanRun()">🚪 チェックアウト</button></div>' +
       '<div class="card">' + queueListHtml + '</div>';
     return;
   }
@@ -3263,7 +3269,7 @@ function renderPlanRun() {
       }).join('') +
       '</div>' +
       '<div class="card">' + queueListHtml + '</div>' +
-      '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 ここで終了（チェックアウト）</button>' +
+      '<button class="secondary" style="margin-bottom:8px;" onclick="endPlanEarly()">✅ ここでプラン終了</button>' +
       '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
     return;
   }
@@ -3321,7 +3327,7 @@ function renderPlanRun() {
     '<button class="ghost" style="margin-top:8px;" onclick="skipExercise(' + activeRun.currentIndex + ')">⏭ この種目の残りをスキップ</button>' +
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
-    '<button class="secondary" style="margin-bottom:8px;" onclick="checkoutPlan()">🚪 ここで終了（チェックアウト）</button>' +
+    '<button class="secondary" style="margin-bottom:8px;" onclick="endPlanEarly()">✅ ここでプラン終了</button>' +
     '<button class="ghost" onclick="quitPlan()">プランを中断する</button>';
 }
 
@@ -3440,6 +3446,17 @@ function checkoutPlan() {
   const remaining = activeRun.queue.length - activeRun.doneIndices.length;
   if (remaining > 0 && !confirm('未実施の' + remaining + 'セットを残して終了し、トレ時間を記録します。よろしいですか？')) return;
   completePlanRun();
+}
+
+// 残りの種目をスキップ扱いにしてプラン終了画面（トレ時間の確認→チェックアウト）へ進む
+function endPlanEarly() {
+  const remaining = remainingQueueItems();
+  if (remaining.length > 0 && !confirm('未実施の' + remaining.length + 'セットをスキップしてプランを終了しますか？')) return;
+  if (!activeRun.skippedIndices) activeRun.skippedIndices = [];
+  remaining.forEach(r => { activeRun.doneIndices.push(r.i); activeRun.skippedIndices.push(r.i); });
+  activeRun.currentIndex = -1;
+  saveActiveRun();
+  renderPlanRun();
 }
 
 function finishPlan() {
