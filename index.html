@@ -570,7 +570,9 @@
     <h3>予定を入れる</h3>
     <p id="schedule-plan-name" style="font-size:17px;color:var(--text-secondary);margin:0 0 12px;"></p>
     <label class="field-label">日付</label>
-    <input type="date" id="schedule-date-input" style="margin-bottom:16px;">
+    <input type="date" id="schedule-date-input" style="margin-bottom:12px;">
+    <label class="field-label">開始予定時刻（任意）</label>
+    <input type="time" id="schedule-time-input" style="margin-bottom:16px;">
     <button class="primary" onclick="saveSchedule()">この日に予定する</button>
   </div>
 </div>
@@ -1359,6 +1361,7 @@ function renderTodayPlanCard() {
     // 同じ日に複数の予定（ジム＋屋外ランなど）を持てるので、その日の予定をすべて並べる
     const items = d.date ? scheduledPlans
       .filter(x => x.date === d.date)
+      .sort(compareSchedule)
       .map(s => ({ s, plan: plans.find(p => p.id === s.planId) }))
       .filter(x => x.plan) : [];
     return { label: d.label, items };
@@ -1392,6 +1395,7 @@ function renderTodayPlanCard() {
         return '<div style="margin-bottom:' + (lastItem ? '0' : '12px') + ';">' +
           '<p style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
           (j === 0 ? dayChip : '') +
+          (it.s.time ? '<span style="font-size:15px;font-weight:700;color:var(--text-secondary);">🕘 ' + it.s.time + '〜</span>' : '') +
           '<span style="font-weight:800;font-size:19px;min-width:0;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
           (it.s.completed ? '<span class="badge">実施済</span>' : '') +
           '</p>' +
@@ -3053,7 +3057,7 @@ function renderScheduleList() {
   const today = todayStr();
   const upcoming = scheduledPlans
     .filter(s => s.date >= today && plans.find(p => p.id === s.planId))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort(compareSchedule);
   if (upcoming.length === 0) {
     el.innerHTML = '<div class="empty">予定はまだありません</div>';
     return;
@@ -3064,7 +3068,7 @@ function renderScheduleList() {
     const isRunningThis = activeRun && activeRun.scheduleDate === s.date && activeRun.planId === s.planId;
     return '<div class="card" style="' + (isToday ? 'border:2px solid var(--accent);' : '') + '">' +
       '<div class="head" style="display:flex;justify-content:space-between;align-items:center;">' +
-      '<span style="font-size:16px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + '</span>' +
+      '<span style="font-size:16px;color:var(--text-muted);">' + fmtDateLabel(s.date) + (isToday ? ' ・ 今日' : '') + (s.time ? ' ・ ' + s.time + '〜' : '') + '</span>' +
       '<span class="del" style="color:var(--coral);font-size:16px;cursor:pointer;" onclick="removeSchedule(\'' + s.date + '\', \'' + s.planId + '\')">削除</span>' +
       '</div>' +
       '<p style="font-weight:600;font-size:18px;margin:4px 0 ' + (isToday ? '10px' : '0') + ';">' + escapeHtml(plan.name) + '</p>' +
@@ -3075,6 +3079,12 @@ function renderScheduleList() {
   }).join('');
 }
 
+// 日付順、同日内は開始予定時刻順（時刻未設定は後ろ）
+function compareSchedule(a, b) {
+  if (a.date !== b.date) return a.date.localeCompare(b.date);
+  return (a.time || '99:99').localeCompare(b.time || '99:99');
+}
+
 let scheduleTargetPlanId = null;
 
 function openSchedulePlan(planId) {
@@ -3082,6 +3092,7 @@ function openSchedulePlan(planId) {
   const plan = plans.find(p => p.id === planId);
   document.getElementById('schedule-plan-name').textContent = plan ? plan.name : '';
   document.getElementById('schedule-date-input').value = todayStr();
+  document.getElementById('schedule-time-input').value = '';
   openModal('modal-schedule-plan');
 }
 
@@ -3093,7 +3104,10 @@ function saveSchedule() {
     alert(fmtDateLabel(date) + 'にはすでにこのプランの予定があります');
     return;
   }
-  scheduledPlans.push({ date, planId: scheduleTargetPlanId });
+  const time = document.getElementById('schedule-time-input').value;
+  const entry = { date, planId: scheduleTargetPlanId };
+  if (time) entry.time = time;
+  scheduledPlans.push(entry);
   saveScheduledPlans();
   closeModal('modal-schedule-plan');
   renderScheduleList();
