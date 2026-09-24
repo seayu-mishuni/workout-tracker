@@ -279,6 +279,16 @@
       <div class="card" id="today-plan-card"></div>
 
       <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <button class="ghost" onclick="shiftCalendarMonth(-1)">‹ 前月</button>
+          <p id="res-calendar-label" style="font-weight:600;font-size:17px;margin:0;"></p>
+          <button class="ghost" onclick="shiftCalendarMonth(1)">翌月 ›</button>
+        </div>
+        <div id="res-calendar"></div>
+        <div id="res-day-detail" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
         <p class="field-label" id="res-summary-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div id="res-streak" style="margin-bottom:10px;"></div>
         <div class="row">
@@ -310,16 +320,6 @@
           <div class="stat"><p>前月比</p><p id="res-vs-last-month">-</p></div>
           <div class="stat"><p>🚶 平均歩数(直近30日)</p><p id="res-avg-steps">-</p></div>
         </div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <button class="ghost" onclick="shiftCalendarMonth(-1)">‹ 前月</button>
-          <p id="res-calendar-label" style="font-weight:600;font-size:17px;margin:0;"></p>
-          <button class="ghost" onclick="shiftCalendarMonth(1)">翌月 ›</button>
-        </div>
-        <div id="res-calendar"></div>
-        <div id="res-day-detail" style="margin-top:12px;"></div>
       </div>
 
       <div class="card">
@@ -1376,10 +1376,15 @@ function renderTodayPlanCard() {
         ? '<span class="mini-chip c-green" style="font-size:13px;">🔵 今日</span>'
         : '<span class="mini-chip" style="font-size:13px;">🔷 ' + e.label + '</span>';
       if (e.items.length === 0) {
-        return divider + '<p style="margin:0 0 ' + (last ? '0' : '12px') + ';">' + dayChip +
-          '<span style="font-size:15px;color:var(--text-muted);margin-left:8px;">予定はありません</span></p>';
+        return divider + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:' + (last ? '0' : '12px') + ';">' +
+          '<div style="flex-shrink:0;width:104px;">' + dayChip + '</div>' +
+          '<span style="font-size:15px;color:var(--text-muted);">予定はありません</span></div>';
       }
-      return divider + e.items.map((it, j) => {
+      // 左に日付チップ、右に予定を縦に揃えて並べる（複数件でも行頭がずれないように）
+      return divider + '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:' + (last ? '0' : '12px') + ';">' +
+        '<div style="flex-shrink:0;width:104px;padding-top:2px;">' + dayChip + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+        e.items.map((it, j) => {
         const isRunning = i === 0 && activeRun && activeRun.scheduleDate === it.s.date &&
           (activeRun.planId ? activeRun.planId === it.s.planId : j === 0);
         const showCheckin = i === 0 && !it.s.completed && !activeRun;
@@ -1391,17 +1396,17 @@ function renderTodayPlanCard() {
           footer = '<p style="margin:0 0 8px;"><span class="mini-chip c-green">🏃 トレ中 ・ 経過' + elapsedMin + '分</span></p>' +
             '<button class="primary" onclick="checkoutPlan()">🚪 チェックアウト</button>';
         }
-        const lastItem = last && j === e.items.length - 1;
-        return '<div style="margin-bottom:' + (lastItem ? '0' : '12px') + ';">' +
-          '<p style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
-          (j === 0 ? dayChip : '') +
-          (it.s.time ? '<span style="font-size:15px;font-weight:700;color:var(--text-secondary);">🕘 ' + it.s.time + '〜</span>' : '') +
-          '<span style="font-weight:800;font-size:19px;min-width:0;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
-          (it.s.completed ? '<span class="badge">実施済</span>' : '') +
-          '</p>' +
+        const lastItem = j === e.items.length - 1;
+        return '<div style="' + (lastItem ? '' : 'padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed var(--border);') + '">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
+          '<span style="flex-shrink:0;width:62px;font-size:15px;font-weight:700;color:var(--text-secondary);">' + (it.s.time ? it.s.time + '〜' : '—') + '</span>' +
+          '<span style="flex:1;min-width:0;font-weight:800;font-size:18px;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
+          (it.s.completed ? '<span class="badge" style="flex-shrink:0;">実施済</span>' : '') +
+          '</div>' +
           footer +
           '</div>';
-      }).join('');
+      }).join('') +
+        '</div></div>';
     }).join('');
 }
 
