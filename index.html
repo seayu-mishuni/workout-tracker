@@ -279,6 +279,11 @@
       <div class="card" id="today-plan-card"></div>
 
       <div class="card">
+        <p class="field-label" id="res-last-label" style="margin-bottom:8px;">前回のトレ</p>
+        <div id="res-last-training">-</div>
+      </div>
+
+      <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <button class="ghost" onclick="shiftCalendarMonth(-1)">‹ 前月</button>
           <p id="res-calendar-label" style="font-weight:600;font-size:17px;margin:0;"></p>
@@ -292,9 +297,6 @@
         <p class="field-label" id="res-summary-label" style="margin-bottom:8px;">今月のサマリー</p>
         <div id="res-streak" style="margin-bottom:10px;"></div>
         <div class="row">
-          <div class="stat" style="flex:1;"><p id="res-last-label">前回のトレ</p><div id="res-last-training" style="margin-top:6px;">-</div></div>
-        </div>
-        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>トレーニング回数</p><p id="res-count">0日</p></div>
           <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ平均時間</p><p id="res-avg-duration">-</p></div>
         </div>
