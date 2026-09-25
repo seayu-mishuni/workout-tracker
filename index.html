@@ -553,6 +553,8 @@
     <h3 id="add-plan-title">テンプレートを作成</h3>
     <label class="field-label">テンプレート名</label>
     <input type="text" id="plan-title" placeholder="例: 胸の日" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
+    <label class="field-label">ジム（任意）</label>
+    <input type="text" id="plan-gym" list="gym-name-history" placeholder="例: ◯◯ジム 枚方店" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
     <datalist id="ex-name-history"></datalist>
     <div id="plan-exercises"></div>
     <button class="secondary" style="margin-bottom:8px;" onclick="addPlanExerciseRow()">＋ 種目を追加</button>
@@ -1012,7 +1014,7 @@ function gymNames() {
     ...workoutLogs.filter(l => l.gym).map(l => ({ gym: l.gym, date: l.date })),
     ...planHistory.filter(h => h.gym).map(h => ({ gym: h.gym, date: h.date }))
   ].sort((a, b) => b.date.localeCompare(a.date));
-  return [...new Set(items.map(x => x.gym))];
+  return [...new Set([...items.map(x => x.gym), ...plans.filter(p => p.gym).map(p => p.gym)])];
 }
 function refreshGymDatalist() {
   document.getElementById('gym-name-history').innerHTML =
@@ -2954,6 +2956,8 @@ function openAddPlan(planId) {
   const plan = editingPlanId ? plans.find(p => p.id === editingPlanId) : null;
   document.getElementById('add-plan-title').textContent = plan ? 'テンプレートを編集' : 'テンプレートを作成';
   document.getElementById('plan-title').value = plan ? plan.name : '';
+  refreshGymDatalist();
+  document.getElementById('plan-gym').value = plan && plan.gym ? plan.gym : '';
   document.getElementById('plan-exercises').innerHTML = '';
   const history = document.getElementById('ex-name-history');
   const names = [...new Set([...machines.map(m => m.name), ...workoutLogs.map(l => l.exercise)])];
@@ -3060,13 +3064,17 @@ function savePlan() {
     }
   });
   if (exercises.length === 0) { alert('種目を1つ以上入力してください'); return; }
+  const gym = document.getElementById('plan-gym').value.trim();
+  let target;
   if (editingPlanId) {
-    const plan = plans.find(p => p.id === editingPlanId);
-    plan.name = name;
-    plan.exercises = exercises;
+    target = plans.find(p => p.id === editingPlanId);
+    target.name = name;
+    target.exercises = exercises;
   } else {
-    plans.push({ id: uid(), name, exercises });
+    target = { id: uid(), name, exercises };
+    plans.push(target);
   }
+  if (gym) target.gym = gym; else delete target.gym;
   editingPlanId = null;
   savePlans();
   closeModal('modal-add-plan');
@@ -3099,6 +3107,7 @@ function renderPlanScreen() {
       '<span style="font-weight:600;font-size:18px;">' + escapeHtml(p.name) + '</span>' +
       '<span class="del" style="color:var(--coral);font-size:18px;cursor:pointer;" onclick="deletePlan(\'' + p.id + '\')">削除</span>' +
       '</div>' +
+      (p.gym ? '<p style="font-size:15px;color:var(--text-muted);margin:4px 0 0;">🏢 ' + escapeHtml(p.gym) + '</p>' : '') +
       '<p style="font-size:18px;color:var(--text-secondary);margin:6px 0 10px;">' + p.exercises.map(e => escapeHtml(e.name)).join(' / ') + '</p>' +
       '<button class="primary" style="margin-bottom:8px;" onclick="openSchedulePlan(\'' + p.id + '\')">📅 予定に追加</button>' +
       '<button class="secondary" onclick="openAddPlan(\'' + p.id + '\')">✎ 編集</button>' +
@@ -3204,7 +3213,8 @@ function openStartPlanModal(planId, scheduleDate) {
   const gymOnly = plan.exercises.some(e => e.type !== 'run');
   document.getElementById('start-plan-gym-wrap').style.display = gymOnly ? '' : 'none';
   refreshGymDatalist();
-  document.getElementById('start-plan-gym').value = gymOnly ? (gymNames()[0] || '') : '';
+  // テンプレートにジムが指定されていればそれ、無ければ直近のジムを初期値にする（その場で変更も可）
+  document.getElementById('start-plan-gym').value = gymOnly ? (plan.gym || gymNames()[0] || '') : '';
   renderStartPlanList();
   openModal('modal-start-plan');
 }
