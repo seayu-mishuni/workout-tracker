@@ -305,6 +305,9 @@
           <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ合計時間(ラン含む)</p><p id="res-total-duration">-</p></div>
         </div>
         <div class="row" style="margin-top:10px;">
+          <div class="stat" style="flex:1;"><p>🗾 東海道ラン（枚方宿→江戸・日本橋）</p><div id="res-run-trip" style="margin-top:6px;">-</div></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>消費カロリー(目安)</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
         </div>
@@ -1557,6 +1560,7 @@ function renderResultsSummary() {
   document.getElementById('res-run-note').textContent = runLogs.length
     ? round1(runKm) + 'km ・ ' + new Set(runLogs.map(l => l.date)).size + '日'
     : '';
+  document.getElementById('res-run-trip').innerHTML = runTripHtml(totalRunKm(), runKm);
 
   // プラン実行の履歴ではなく記録そのものを基準にする（手動で記録した日も表示される）
   const lastEl = document.getElementById('res-last-training');
@@ -1627,6 +1631,68 @@ function trainingSessions(mk) {
     if (runByDate[date] > 0) list.push({ id: 'run-' + date, kind: 'run', planName: '🏃 ランニング(記録)', date, durationMin: Math.round(runByDate[date]) });
   });
   return list;
+}
+
+// 屋外ラン累計距離の旅。東海道五十七次の第56宿・枚方宿から江戸・日本橋へ向かう
+// （日本橋からの里程をもとにした目安。大津〜枚方は京街道）
+const TOKAIDO_FROM_NIHONBASHI = [
+  ['日本橋', 0], ['品川', 7.8], ['川崎', 17.6], ['神奈川', 27.5], ['保土ケ谷', 32.4], ['戸塚', 41.2],
+  ['藤沢', 49.2], ['平塚', 62.9], ['大磯', 65.6], ['小田原', 81.2], ['箱根', 97.9], ['三島', 112.7],
+  ['沼津', 118.5], ['原', 124.3], ['吉原', 136.1], ['蒲原', 147.2], ['由比', 151.1], ['興津', 160.2],
+  ['江尻', 164.3], ['府中', 174.9], ['丸子', 180.5], ['岡部', 188.4], ['藤枝', 195.1], ['島田', 203.8],
+  ['金谷', 207.9], ['日坂', 214.4], ['掛川', 221.5], ['袋井', 230.9], ['見附', 236.8], ['浜松', 253.1],
+  ['舞坂', 263.9], ['新居', 269.8], ['白須賀', 276.3], ['二川', 282.1], ['吉田', 288.1], ['御油', 298.4],
+  ['赤坂', 300.1], ['藤川', 308.9], ['岡崎', 315.6], ['池鯉鮒', 330.6], ['鳴海', 341.6], ['宮', 348.2],
+  ['桑名', 375.8], ['四日市', 388.4], ['石薬師', 399.2], ['庄野', 402.0], ['亀山', 409.8], ['関', 415.7],
+  ['坂下', 422.2], ['土山', 431.9], ['水口', 442.4], ['石部', 455.9], ['草津', 467.6], ['大津', 482.0],
+  ['伏見', 500.0], ['淀', 508.0], ['枚方', 522.0]
+];
+const RUN_TRIP_TOTAL_KM = 522;
+// 枚方宿からの距離に並べ替えた宿場一覧（no は日本橋から数えた宿番号、日本橋は 0）
+const RUN_TRIP_STOPS = TOKAIDO_FROM_NIHONBASHI
+  .map(([name, d], i) => ({ no: i, name, km: round1(RUN_TRIP_TOTAL_KM - d) }))
+  .reverse();
+
+function totalRunKm() {
+  return workoutLogs.filter(l => l.type === 'run')
+    .reduce((sum, l) => sum + l.sets.reduce((s, x) => s + (x.distance || 0), 0), 0);
+}
+
+function stationLabel(s) {
+  return s.no === 0 ? '日本橋' : '第' + s.no + '宿 ' + s.name + '宿';
+}
+
+function runTripHtml(km, monthKm) {
+  if (!km) return '<span style="font-size:15px;color:var(--text-muted);">まだ枚方宿を出発していません。屋外ランの距離で江戸・日本橋を目指します 🏃</span>';
+  const goal = RUN_TRIP_STOPS[RUN_TRIP_STOPS.length - 1];
+  // 日本橋に着いたら2周目として枚方宿から再出発
+  const lap = Math.floor(km / goal.km) + 1;
+  const pos = km % goal.km;
+  let passed = RUN_TRIP_STOPS[0];
+  RUN_TRIP_STOPS.forEach(s => { if (s.km <= pos) passed = s; });
+  const next = RUN_TRIP_STOPS.find(s => s.km > pos) || goal;
+  const pct = Math.min(100, pos / goal.km * 100);
+  const stopsHtml = RUN_TRIP_STOPS.map(s => {
+    const reached = s.km <= pos;
+    return '<span title="' + s.name + '" style="position:absolute;left:' + (s.km / goal.km * 100) + '%;top:50%;transform:translate(-50%,-50%);width:5px;height:5px;border-radius:50%;background:' +
+      (reached ? 'var(--accent)' : 'var(--border)') + ';"></span>';
+  }).join('');
+  return '<p style="margin:0 0 4px;font-size:17px;font-weight:800;">' +
+    (lap > 1 ? '<span class="mini-chip c-amber" style="margin-right:6px;">' + lap + '周目</span>' : '') +
+    (pos === 0 && lap > 1 ? '🎉 江戸・日本橋に到着！' : '📍 ' + stationLabel(passed) + (passed.km === 0 ? 'を出発' : 'を通過')) + '</p>' +
+    '<p style="margin:0 0 10px;font-size:14px;color:var(--text-secondary);">次は' + stationLabel(next) + 'まで あと' + round1(next.km - pos) + 'km' +
+    ' ・ 累計' + round1(km) + 'km' + (monthKm ? '（今月 +' + round1(monthKm) + 'km）' : '') + '</p>' +
+    '<div style="position:relative;height:14px;margin:0 4px;">' +
+      '<div style="position:absolute;left:0;right:0;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--border);"></div>' +
+      '<div style="position:absolute;left:0;width:' + pct + '%;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--accent);"></div>' +
+      stopsHtml +
+      '<span style="position:absolute;left:' + pct + '%;top:50%;transform:translate(-50%,-60%);font-size:16px;">🏃</span>' +
+    '</div>' +
+    // 目盛りの地名は実際の距離の位置に置く（端の地名ははみ出さないよう寄せる）
+    '<div style="position:relative;height:16px;margin:4px 4px 0;font-size:12px;color:var(--text-muted);">' +
+      [['枚方', 0, 'translateX(0)'],['宮', 173.8, 'translateX(-50%)'], ['浜松', 268.9, 'translateX(-50%)'], ['箱根', 424.1, 'translateX(-50%)'], ['日本橋', goal.km, 'translateX(-100%)']]
+        .map(([n, k, t]) => '<span style="position:absolute;left:' + (k / goal.km * 100) + '%;transform:' + t + ';white-space:nowrap;">' + n + '</span>').join('') +
+    '</div>';
 }
 
 function formatMinutes(min) {
