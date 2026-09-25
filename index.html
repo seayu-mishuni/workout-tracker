@@ -233,13 +233,21 @@
   #journey-map-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
   #journey-map-inner img { width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
   #journey-map-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
-  #journey-zoom-ctl { position: absolute; right: 6px; bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
-  #journey-zoom-ctl button {
+  #journey-zoom-ctl, #tokaido-zoom-ctl { position: absolute; right: 6px; bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+  /* 東海道ランの地図。SVGのviewBoxを動かして拡大/移動する */
+  #tokaido-map-wrap {
+    position: relative; width: 100%; overflow: hidden; border-radius: 10px;
+    border: 1px solid var(--border); touch-action: pan-y; cursor: grab; background: var(--bg);
+  }
+  #tokaido-map-wrap.dragging { cursor: grabbing; }
+  #tokaido-map-svg { display: block; width: 100%; height: 100%; user-select: none; }
+  #tokaido-zoom-ctl { flex-direction: row; }
+  #journey-zoom-ctl button, #tokaido-zoom-ctl button {
     width: 32px; height: 32px; padding: 0; border-radius: 8px;
     border: 1px solid var(--border-strong); background: rgba(11,15,13,0.78); color: var(--text);
     font-size: 16px; font-weight: 800; line-height: 1; cursor: pointer;
   }
-  #journey-zoom-ctl button:active { background: var(--accent); color: var(--accent-on); }
+  #journey-zoom-ctl button:active, #tokaido-zoom-ctl button:active { background: var(--accent); color: var(--accent-on); }
   .mini-chip.c-blue { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
   .mini-chip.c-purple { background: var(--purple-bg); color: var(--purple-text); border-color: transparent; }
   .mini-chip.c-green { background: var(--green-bg); color: var(--green-text); border-color: transparent; }
@@ -1715,52 +1723,228 @@ function runTripHtml(km, monthKm) {
     runTripMapSvg(pos, passed, next);
 }
 
-// 日本地図画像から東海道のあたりを切り出し、宿場・ルート・現在地を重ねて描く
-function runTripMapSvg(pos, passed, next) {
-  const stops = RUN_TRIP_STOPS;
-  const xs = stops.map(s => s.px.x), ys = stops.map(s => s.px.y);
+// 東海道ランの地図。日本地図画像から東海道のあたりを切り出し、宿場・ルート・現在地を重ねる。
+// 拡大・移動は SVG の viewBox を動かして行う（z=1 で全体表示、cx/cy は表示中心の画像座標）
+let tokaidoView = { z: 1, cx: null, cy: null };
+let tokaidoState = null;   // { pos, passed, next } 最後に描いた進捗
+
+// ルート全体が収まる切り出し範囲（画像座標）
+function tokaidoBaseBox() {
+  const xs = RUN_TRIP_STOPS.map(s => s.px.x), ys = RUN_TRIP_STOPS.map(s => s.px.y);
   const pad = 8;
   let minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
   let minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
-  // 横長になりすぎないよう、高さを幅の半分以上にする
   const w = maxX - minX;
-  if (maxY - minY < w * 0.5) {
+  // 横長になりすぎないよう、高さを幅の6割以上にする
+  if (maxY - minY < w * 0.6) {
     const cy = (minY + maxY) / 2;
-    minY = cy - w * 0.25; maxY = cy + w * 0.25;
+    minY = cy - w * 0.3; maxY = cy + w * 0.3;
   }
-  const h = maxY - minY;
+  return { x: minX, y: minY, w, h: maxY - minY };
+}
 
-  // 現在地：通過した宿と次の宿の間を距離の割合で内分する
-  const seg = next.km - passed.km;
-  const t = seg > 0 ? Math.min(1, (pos - passed.km) / seg) : 0;
-  const cur = { x: passed.px.x + (next.px.x - passed.px.x) * t, y: passed.px.y + (next.px.y - passed.px.y) * t };
+function tokaidoCurrentPx(st) {
+  const seg = st.next.km - st.passed.km;
+  const t = seg > 0 ? Math.min(1, (st.pos - st.passed.km) / seg) : 0;
+  return {
+    x: st.passed.px.x + (st.next.px.x - st.passed.px.x) * t,
+    y: st.passed.px.y + (st.next.px.y - st.passed.px.y) * t
+  };
+}
 
-  const pt = p => p.x.toFixed(1) + ',' + p.y.toFixed(1);
+function runTripMapSvg(pos, passed, next) {
+  tokaidoState = { pos, passed, next };
+  const box = tokaidoBaseBox();
+  // 描画は renderResultsSummary の後に tokaidoDraw() で行う（wrap の大きさが必要なため）
+  setTimeout(() => { tokaidoSetupGestures(); tokaidoDraw(); }, 0);
+  return '<div id="tokaido-map-wrap" style="aspect-ratio:' + box.w.toFixed(1) + ' / ' + box.h.toFixed(1) + ';">' +
+      '<svg id="tokaido-map-svg" viewBox="' + box.x + ' ' + box.y + ' ' + box.w + ' ' + box.h + '"></svg>' +
+      '<div id="tokaido-zoom-ctl">' +
+        '<button type="button" onclick="tokaidoZoomBtn(1.6)">＋</button>' +
+        '<button type="button" onclick="tokaidoZoomBtn(1/1.6)">－</button>' +
+        '<button type="button" onclick="tokaidoFocusCurrent()" title="現在地へ">◎</button>' +
+        '<button type="button" onclick="tokaidoResetView()" title="全体表示">⤢</button>' +
+      '</div>' +
+    '</div>' +
+    '<p style="margin:6px 0 0;font-size:13px;color:var(--text-muted);">ピンチ / ドラッグ / ダブルタップで拡大・移動できます</p>';
+}
+
+// 表示範囲を切り出し範囲の中に収めて viewBox に反映し、描き直す
+function tokaidoApplyView() {
+  const box = tokaidoBaseBox();
+  const v = tokaidoView;
+  v.z = Math.min(8, Math.max(1, v.z));
+  if (v.cx == null) { v.cx = box.x + box.w / 2; v.cy = box.y + box.h / 2; }
+  const vw = box.w / v.z, vh = box.h / v.z;
+  v.cx = Math.min(box.x + box.w - vw / 2, Math.max(box.x + vw / 2, v.cx));
+  v.cy = Math.min(box.y + box.h - vh / 2, Math.max(box.y + vh / 2, v.cy));
+  const wrap = document.getElementById('tokaido-map-wrap');
+  // 等倍のときは地図をなぞってもページを縦スクロールできるようにする
+  if (wrap) wrap.style.touchAction = v.z > 1 ? 'none' : 'pan-y';
+  tokaidoDraw();
+}
+
+// 拡大しても線・丸・文字の見た目の大きさが変わらないよう、拡大率で割った値で描く
+function tokaidoDraw() {
+  const svg = document.getElementById('tokaido-map-svg');
+  if (!svg || !tokaidoState) return;
+  const box = tokaidoBaseBox();
+  const v = tokaidoView;
+  if (v.cx == null) { v.cx = box.x + box.w / 2; v.cy = box.y + box.h / 2; }
+  const z = v.z, vw = box.w / z, vh = box.h / z;
+  svg.setAttribute('viewBox', (v.cx - vw / 2).toFixed(2) + ' ' + (v.cy - vh / 2).toFixed(2) + ' ' + vw.toFixed(2) + ' ' + vh.toFixed(2));
+
+  // 画面上の1pxが画像座標でいくつか（文字や線をpx指定の感覚で決めるため）
+  const wrap = document.getElementById('tokaido-map-wrap');
+  const u = vw / ((wrap && wrap.clientWidth) || 340);
+  const { pos, next } = tokaidoState;
+  const stops = RUN_TRIP_STOPS;
+  const cur = tokaidoCurrentPx(tokaidoState);
+  const pt = p => p.x.toFixed(2) + ',' + p.y.toFixed(2);
   const allLine = stops.map(s => pt(s.px)).join(' ');
   const doneLine = stops.filter(s => s.km <= pos).map(s => pt(s.px)).concat(pt(cur)).join(' ');
+
   const dots = stops.map(s => {
     const reached = s.km <= pos;
-    return '<circle cx="' + s.px.x.toFixed(1) + '" cy="' + s.px.y.toFixed(1) + '" r="0.9" fill="' + (reached ? 'var(--accent)' : '#fff') +
-      '" stroke="' + (reached ? 'var(--accent)' : '#666') + '" stroke-width="0.35"><title>' + stationLabel(s) + '</title></circle>';
-  }).join('');
-  // 主な宿場と「次の宿」に地名を出す（文字は縁取りして地図の上でも読めるように）
-  const labelNames = ['枚方', '大津', '宮', '浜松', '箱根', '日本橋'];
-  const labels = stops.filter(s => labelNames.includes(s.name) || s === next).map(s => {
-    const isNext = s === next;
-    return '<text x="' + s.px.x.toFixed(1) + '" y="' + (s.px.y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="' + (isNext ? 3.4 : 3) +
-      '" font-weight="' + (isNext ? 800 : 600) + '" fill="' + (isNext ? 'var(--accent)' : '#222') +
-      '" stroke="#fff" stroke-width="0.9" paint-order="stroke">' + (isNext ? '次: ' : '') + s.name + '</text>';
+    return '<circle cx="' + s.px.x.toFixed(2) + '" cy="' + s.px.y.toFixed(2) + '" r="' + (4 * u).toFixed(2) + '" fill="' + (reached ? 'var(--accent)' : '#fff') +
+      '" stroke="' + (reached ? '#0f7a30' : '#555') + '" stroke-width="' + (1.2 * u).toFixed(2) + '"><title>' + stationLabel(s) + '</title></circle>';
   }).join('');
 
-  return '<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">' +
-    '<svg viewBox="' + minX.toFixed(1) + ' ' + minY.toFixed(1) + ' ' + w.toFixed(1) + ' ' + h.toFixed(1) + '" style="width:100%;display:block;">' +
-      '<image href="500px-Japan_topographic_blank_map.jpg" x="0" y="0" width="500" height="683" preserveAspectRatio="none"/>' +
-      '<polyline points="' + allLine + '" fill="none" stroke="#777" stroke-width="0.7" stroke-dasharray="1.4 1" stroke-linejoin="round"/>' +
-      '<polyline points="' + doneLine + '" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>' +
-      dots + labels +
-      '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="3.2" fill="var(--coral)" fill-opacity="0.25"/>' +
-      '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="1.8" fill="var(--coral)" stroke="#fff" stroke-width="0.6"><title>現在地</title></circle>' +
-    '</svg></div>';
+  // 拡大するほど地名を増やす（等倍は主要な宿のみ、2倍で中くらい、4倍以上で全宿）
+  const major = ['枚方', '宮', '浜松', '箱根', '日本橋'];
+  const middle = ['大津', '草津', '亀山', '桑名', '岡崎', '吉田', '掛川', '府中', '沼津', '小田原', '藤沢', '品川'];
+  const showLabel = s => s === next || major.includes(s.name) || (z >= 2 && middle.includes(s.name)) || z >= 4;
+  const fs = 15 * u;
+  const labels = stops.map((s, i) => {
+    if (!showLabel(s)) return '';
+    const isNext = s === next;
+    // 隣り合う宿の文字が重ならないよう、上下交互に置く
+    const below = i % 2 === 0;
+    const y = s.px.y + (below ? fs * 1.15 : -fs * 0.55);
+    return '<text x="' + s.px.x.toFixed(2) + '" y="' + y.toFixed(2) + '" text-anchor="middle" font-size="' + (isNext ? fs * 1.1 : fs).toFixed(2) +
+      '" font-weight="' + (isNext ? 800 : 700) + '" fill="' + (isNext ? '#0f7a30' : '#1a1a1a') +
+      '" stroke="#fff" stroke-width="' + (3.5 * u).toFixed(2) + '" paint-order="stroke" stroke-linejoin="round">' + (isNext ? '次: ' : '') + s.name + '</text>';
+  }).join('');
+
+  svg.innerHTML =
+    '<image href="500px-Japan_topographic_blank_map.jpg" x="0" y="0" width="500" height="683" preserveAspectRatio="none"/>' +
+    '<polyline points="' + allLine + '" fill="none" stroke="#666" stroke-width="' + (2 * u).toFixed(2) + '" stroke-dasharray="' + (5 * u).toFixed(2) + ' ' + (4 * u).toFixed(2) + '" stroke-linejoin="round"/>' +
+    '<polyline points="' + doneLine + '" fill="none" stroke="var(--accent)" stroke-width="' + (4 * u).toFixed(2) + '" stroke-linejoin="round" stroke-linecap="round"/>' +
+    dots + labels +
+    '<circle cx="' + cur.x.toFixed(2) + '" cy="' + cur.y.toFixed(2) + '" r="' + (11 * u).toFixed(2) + '" fill="var(--coral)" fill-opacity="0.25"/>' +
+    '<circle cx="' + cur.x.toFixed(2) + '" cy="' + cur.y.toFixed(2) + '" r="' + (6 * u).toFixed(2) + '" fill="var(--coral)" stroke="#fff" stroke-width="' + (2 * u).toFixed(2) + '"><title>現在地</title></circle>';
+}
+
+// 画面上の点(sx,sy)（wrap内のpx）を固定したまま拡大率をfactor倍にする
+function tokaidoZoomAt(factor, sx, sy) {
+  const wrap = document.getElementById('tokaido-map-wrap');
+  if (!wrap) return;
+  const box = tokaidoBaseBox();
+  const v = tokaidoView;
+  if (v.cx == null) { v.cx = box.x + box.w / 2; v.cy = box.y + box.h / 2; }
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  const vw = box.w / v.z, vh = box.h / v.z;
+  const mx = v.cx - vw / 2 + sx / W * vw, my = v.cy - vh / 2 + sy / H * vh;
+  const nz = Math.min(8, Math.max(1, v.z * factor));
+  const k = v.z / nz;
+  v.cx = mx + (v.cx - mx) * k;
+  v.cy = my + (v.cy - my) * k;
+  v.z = nz;
+  tokaidoApplyView();
+}
+
+function tokaidoPanBy(dxPx, dyPx) {
+  const wrap = document.getElementById('tokaido-map-wrap');
+  if (!wrap) return;
+  const box = tokaidoBaseBox();
+  const v = tokaidoView;
+  v.cx -= dxPx / wrap.clientWidth * (box.w / v.z);
+  v.cy -= dyPx / wrap.clientHeight * (box.h / v.z);
+  tokaidoApplyView();
+}
+
+function tokaidoZoomBtn(factor) {
+  const wrap = document.getElementById('tokaido-map-wrap');
+  if (wrap) tokaidoZoomAt(factor, wrap.clientWidth / 2, wrap.clientHeight / 2);
+}
+
+function tokaidoResetView() {
+  tokaidoView = { z: 1, cx: null, cy: null };
+  tokaidoApplyView();
+}
+
+// 現在地が中央に来るように拡大する
+function tokaidoFocusCurrent() {
+  if (!tokaidoState) return;
+  const cur = tokaidoCurrentPx(tokaidoState);
+  tokaidoView.z = Math.max(tokaidoView.z, 4);
+  tokaidoView.cx = cur.x;
+  tokaidoView.cy = cur.y;
+  tokaidoApplyView();
+}
+
+// 日本縦断チャレンジの地図と同じ操作（ドラッグ・ピンチ・ダブルタップ・ホイール）
+function tokaidoSetupGestures() {
+  const wrap = document.getElementById('tokaido-map-wrap');
+  if (!wrap || wrap.dataset.gesturesReady) return;
+  wrap.dataset.gesturesReady = '1';
+  const pointers = new Map();
+  let lastMid = null, lastDist = 0, lastTapAt = 0;
+  const midOf = pts => ({ x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 });
+  const distOf = pts => Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  const local = e => {
+    const r = wrap.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+
+  wrap.addEventListener('pointerdown', e => {
+    if (e.target.closest('#tokaido-zoom-ctl')) return;
+    wrap.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, local(e));
+    const pts = [...pointers.values()];
+    if (pts.length === 2) { lastMid = midOf(pts); lastDist = distOf(pts); }
+    else {
+      lastMid = pts[0];
+      const now = Date.now();
+      if (now - lastTapAt < 300) tokaidoZoomAt(2, pts[0].x, pts[0].y);
+      lastTapAt = now;
+    }
+    wrap.classList.add('dragging');
+  });
+
+  wrap.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, local(e));
+    const pts = [...pointers.values()];
+    if (pts.length >= 2) {
+      const mid = midOf(pts), dist = distOf(pts);
+      if (lastDist > 0) tokaidoZoomAt(dist / lastDist, mid.x, mid.y);
+      tokaidoPanBy(mid.x - lastMid.x, mid.y - lastMid.y);
+      lastMid = mid; lastDist = dist;
+    } else if (lastMid && tokaidoView.z > 1) {
+      tokaidoPanBy(pts[0].x - lastMid.x, pts[0].y - lastMid.y);
+      lastMid = pts[0];
+    }
+    if (tokaidoView.z > 1 || pts.length >= 2) e.preventDefault();
+  });
+
+  const endPointer = e => {
+    pointers.delete(e.pointerId);
+    const pts = [...pointers.values()];
+    lastMid = pts.length ? pts[0] : null;
+    lastDist = 0;
+    if (pts.length === 0) wrap.classList.remove('dragging');
+  };
+  wrap.addEventListener('pointerup', endPointer);
+  wrap.addEventListener('pointercancel', endPointer);
+  // キャプチャが外れたまま指の情報が残ると、次のタッチをピンチと誤認するため確実に消す
+  wrap.addEventListener('lostpointercapture', endPointer);
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = local(e);
+    tokaidoZoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+  }, { passive: false });
 }
 
 function formatMinutes(min) {
