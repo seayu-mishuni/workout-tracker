@@ -529,6 +529,11 @@
     <h3>種目を追加</h3>
     <label class="field-label">種目名</label>
     <select id="ex-title" style="margin-bottom:12px;" onchange="onExNameInput()"></select>
+    <div id="ex-gym-wrap">
+      <label class="field-label">ジム（任意）</label>
+      <input type="text" id="ex-gym" list="gym-name-history" placeholder="例: ◯◯ジム 枚方店" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;">
+    </div>
+    <datalist id="gym-name-history"></datalist>
     <label class="field-label">種別</label>
     <div class="type-toggle" id="ex-type-toggle">
       <button type="button" class="active" data-type="strength" onclick="setExType('strength')">筋トレ (重量×回数)</button>
@@ -561,7 +566,11 @@
     <span class="close" onclick="closeModal('modal-start-plan')">×</span>
     <h3>実施する種目を選択</h3>
     <p id="start-plan-name" style="font-size:18px;color:var(--text-secondary);margin:0 0 12px;"></p>
-    <div id="start-plan-exercises" style="margin-bottom:16px;"></div>
+    <div id="start-plan-exercises" style="margin-bottom:12px;"></div>
+    <div id="start-plan-gym-wrap">
+      <label class="field-label">ジム（任意）</label>
+      <input type="text" id="start-plan-gym" list="gym-name-history" placeholder="例: ◯◯ジム 枚方店" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:16px;">
+    </div>
     <button class="primary" onclick="confirmStartPlan()">この内容で開始</button>
   </div>
 </div>
@@ -927,6 +936,7 @@ function exerciseCardsHtml(logs) {
       '<div class="head"><span class="name">' + escapeHtml(l.exercise) + '</span>' +
       '<span class="badge' + badgeClassFor(l.type) + '">' + l.sets.length + 'セット</span></div>' +
       '<p class="sets">' + setsText + '</p>' +
+      (l.gym ? '<p style="margin:2px 0 0;font-size:14px;color:var(--text-muted);">🏢 ' + escapeHtml(l.gym) + '</p>' : '') +
       '<div style="display:flex;justify-content:flex-end;gap:16px;margin-top:4px;">' +
       '<span style="color:var(--text-secondary);font-size:15px;font-weight:700;cursor:pointer;" onclick="openEditExercise(\'' + l.id + '\')">編集</span>' +
       '<span class="del" style="float:none;" onclick="deleteLog(\'' + l.id + '\')">削除</span>' +
@@ -994,6 +1004,26 @@ function populateExTitleSelect(selectedName) {
   sel.value = selectedName || names[0];
 }
 
+/* ---------- ジム ---------- */
+
+// 過去に記録したジム名（新しい順）。入力欄の候補に使う
+function gymNames() {
+  const items = [
+    ...workoutLogs.filter(l => l.gym).map(l => ({ gym: l.gym, date: l.date })),
+    ...planHistory.filter(h => h.gym).map(h => ({ gym: h.gym, date: h.date }))
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  return [...new Set(items.map(x => x.gym))];
+}
+function refreshGymDatalist() {
+  document.getElementById('gym-name-history').innerHTML =
+    gymNames().map(n => '<option value="' + escapeHtml(n) + '">').join('');
+}
+// その日すでに記録したジムがあればそれ、無ければ直近のジムを初期値にする
+function defaultGymFor(date) {
+  const sameDay = workoutLogs.find(l => l.date === date && l.gym);
+  return sameDay ? sameDay.gym : (gymNames()[0] || '');
+}
+
 function openAddExercise(date) {
   const targetDate = date || todayStr();
   if (targetDate === todayStr() && !activeRun) {
@@ -1010,6 +1040,8 @@ function openAddExercise(date) {
   document.querySelector('#modal-add-exercise h3').textContent =
     exTargetDate === todayStr() ? '種目を追加' : '種目を追加（' + fmtDateLabel(exTargetDate) + '）';
   document.querySelector('#modal-add-exercise button.primary').textContent = '保存';
+  refreshGymDatalist();
+  document.getElementById('ex-gym').value = defaultGymFor(exTargetDate);
   const name = document.getElementById('ex-title').value;
   setExType(machines.length ? machineType(name) : 'strength');
   openModal('modal-add-exercise');
@@ -1023,6 +1055,9 @@ function openEditExercise(id) {
   populateExTitleSelect(log.exercise);
   exCurrentType = log.type;
   document.querySelectorAll('#ex-type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === log.type));
+  refreshGymDatalist();
+  document.getElementById('ex-gym').value = log.gym || '';
+  toggleGymField();
   const wrap = document.getElementById('ex-sets');
   wrap.innerHTML = '';
   log.sets.forEach(s => addSetRow(s));
@@ -1043,6 +1078,12 @@ function setExType(type) {
   document.querySelectorAll('#ex-type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   document.getElementById('ex-sets').innerHTML = '';
   addSetRow();
+  toggleGymField();
+}
+
+// 屋外ランはジムで行わないので、ジム欄を隠す
+function toggleGymField() {
+  document.getElementById('ex-gym-wrap').style.display = exCurrentType === 'run' ? 'none' : '';
 }
 
 function addSetRow(prefill) {
@@ -1133,12 +1174,18 @@ function saveExercise() {
     });
   }
   if (sets.length === 0) { alert('セットを1つ以上入力してください'); return; }
+  const gym = exCurrentType === 'run' ? '' : document.getElementById('ex-gym').value.trim();
   if (editingLogId) {
     const log = workoutLogs.find(l => l.id === editingLogId);
-    if (log) { log.exercise = name; log.type = exCurrentType; log.sets = sets; }
+    if (log) {
+      log.exercise = name; log.type = exCurrentType; log.sets = sets;
+      if (gym) log.gym = gym; else delete log.gym;
+    }
     editingLogId = null;
   } else {
-    workoutLogs.push({ id: uid(), date: exTargetDate, exercise: name, type: exCurrentType, sets: sets });
+    const entry = { id: uid(), date: exTargetDate, exercise: name, type: exCurrentType, sets: sets };
+    if (gym) entry.gym = gym;
+    workoutLogs.push(entry);
   }
   saveWorkoutLogs();
   closeModal('modal-add-exercise');
@@ -1525,6 +1572,8 @@ function renderResultsSummary() {
       lastSessions.length > 1
         ? '<span class="mini-chip c-blue">⏱ 合計' + lastSessions.reduce((s, h) => s + h.durationMin, 0) + '分</span>' : '',
       lastSessions.map(h => '<span class="mini-chip c-purple">📍 ' + escapeHtml(h.planName) + ' ' + h.durationMin + '分</span>').join(''),
+      [...new Set([...lastSessions.map(h => h.gym), ...lastLogs.map(l => l.gym)].filter(Boolean))]
+        .map(g => '<span class="mini-chip">🏢 ' + escapeHtml(g) + '</span>').join(''),
       '<span class="mini-chip c-green">🏋 ' + lastExCount + '種目 / ' + lastSetCount + 'セット</span>',
       '<span class="mini-chip c-amber">🔥 ' + formatInt(lastKcal) + 'kcal</span>',
       lastHasCardio ? '<span class="mini-chip c-blue">🏃 有酸素</span>' : ''
@@ -1553,7 +1602,7 @@ function renderDurationHistory() {
   // 記録タブで登録したランは記録側で編集・削除する（ここでは表示のみ）
   listEl.innerHTML = historyThisMonth.map(h =>
     '<div class="list-item" style="padding:12px;">' +
-      '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分</p></div>' +
+      '<div class="lt"><p>' + escapeHtml(h.planName) + '</p><p>' + h.date + '・' + h.durationMin + '分' + (h.gym ? '・🏢 ' + escapeHtml(h.gym) : '') + '</p></div>' +
       (h.kind === 'run'
         ? '<span style="color:var(--text-muted);font-size:13px;">記録から</span>'
         : '<span style="color:var(--coral);cursor:pointer;" onclick="deleteDurationHistory(\'' + h.id + '\')">削除</span>') +
@@ -3151,6 +3200,11 @@ function openStartPlanModal(planId, scheduleDate) {
   startPlanChecked = {};
   plan.exercises.forEach((_, i) => { startPlanChecked[i] = true; });
   document.getElementById('start-plan-name').textContent = plan.name;
+  // 屋外ランだけのプランはジム欄を出さない
+  const gymOnly = plan.exercises.some(e => e.type !== 'run');
+  document.getElementById('start-plan-gym-wrap').style.display = gymOnly ? '' : 'none';
+  refreshGymDatalist();
+  document.getElementById('start-plan-gym').value = gymOnly ? (gymNames()[0] || '') : '';
   renderStartPlanList();
   openModal('modal-start-plan');
 }
@@ -3189,7 +3243,9 @@ function confirmStartPlan() {
   const selected = startPlanOrder.filter(i => startPlanChecked[i]);
   if (selected.length === 0) { alert('種目を1つ以上選択してください'); return; }
   closeModal('modal-start-plan');
+  const gym = document.getElementById('start-plan-gym').value.trim();
   startPlan(startPlanTargetId, selected, startPlanTargetScheduleDate);
+  if (activeRun && gym) { activeRun.gym = gym; saveActiveRun(); renderPlanScreen(); }
   showScreen('plan');
 }
 
@@ -3324,6 +3380,7 @@ function renderPlanRun() {
   view.innerHTML =
     '<div class="card" style="border:2px solid var(--accent);">' +
     '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) +
+    (activeRun.gym ? ' ・ 🏢 ' + escapeHtml(activeRun.gym) : '') +
     ' ・ 経過 ' + elapsedMin + '分</p>' +
     '<p style="margin:2px 0 0;font-size:21px;font-weight:800;">▶ ' + escapeHtml(cur.name) + '</p>' +
     '<p style="margin:2px 0 10px;font-size:16px;color:var(--text-secondary);">セット ' + cur.setIndex + ' / ' + cur.totalSets + targetText + '</p>' +
@@ -3370,6 +3427,7 @@ function recordCurrentSet() {
   let entry = workoutLogs.find(l => l.date === t && l.exercise === cur.name && l.type === cur.type && l.runId === activeRun.startedAt);
   if (!entry) {
     entry = { id: uid(), date: t, exercise: cur.name, type: cur.type, sets: [], runId: activeRun.startedAt };
+    if (activeRun.gym && cur.type !== 'run') entry.gym = activeRun.gym;
     workoutLogs.push(entry);
   }
   entry.sets.push(set);
@@ -3437,7 +3495,9 @@ function completePlanRun() {
     alert('開始から' + durationMin + '分経過していたため、記録時間を' + MAX_DURATION_MIN + '分として保存します。\n実際と違う場合は「トレ平均時間」から削除できます。');
     durationMin = MAX_DURATION_MIN;
   }
-  planHistory.push({ id: uid(), planName: activeRun.planName, date: activeRun.date || todayStr(), durationMin, status: 'completed' });
+  const histEntry = { id: uid(), planName: activeRun.planName, date: activeRun.date || todayStr(), durationMin, status: 'completed' };
+  if (activeRun.gym) histEntry.gym = activeRun.gym;
+  planHistory.push(histEntry);
   savePlanHistory();
   if (activeRun.scheduleDate) {
     // 同日に複数の予定があるので、実行中のプランの予定だけ実施済にする（planId の無い旧データは先頭の未実施）
