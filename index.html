@@ -305,9 +305,6 @@
           <div class="stat" style="cursor:pointer;" onclick="openDurationHistory()"><p>トレ合計時間(ラン含む)</p><p id="res-total-duration">-</p></div>
         </div>
         <div class="row" style="margin-top:10px;">
-          <div class="stat" style="flex:1;"><p>🗾 東海道ラン（枚方宿→江戸・日本橋）</p><div id="res-run-trip" style="margin-top:6px;">-</div></div>
-        </div>
-        <div class="row" style="margin-top:10px;">
           <div class="stat"><p>消費カロリー(目安)</p><p id="res-calories">0<span class="unit">kcal</span></p></div>
           <div class="stat"><p>総ボリューム</p><p id="res-volume">0<span class="unit">kg</span></p></div>
         </div>
@@ -378,6 +375,11 @@
             <div class="check-row"><input type="checkbox" id="journey-include-treadmill" onchange="onJourneySettingsChange()"> <label for="journey-include-treadmill" style="margin-left:4px;">トレッドミルを距離に含める</label></div>
           </div>
         </details>
+      </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">🗾 東海道ラン（枚方宿 → 江戸・日本橋）</p>
+        <div id="res-run-trip">-</div>
       </div>
 
       <div class="card">
@@ -1634,23 +1636,57 @@ function trainingSessions(mk) {
 }
 
 // 屋外ラン累計距離の旅。東海道五十七次の第56宿・枚方宿から江戸・日本橋へ向かう
-// （日本橋からの里程をもとにした目安。大津〜枚方は京街道）
+// （[宿名, 日本橋からの距離km, 緯度, 経度]。距離は里程をもとにした目安、大津〜枚方は京街道）
 const TOKAIDO_FROM_NIHONBASHI = [
-  ['日本橋', 0], ['品川', 7.8], ['川崎', 17.6], ['神奈川', 27.5], ['保土ケ谷', 32.4], ['戸塚', 41.2],
-  ['藤沢', 49.2], ['平塚', 62.9], ['大磯', 65.6], ['小田原', 81.2], ['箱根', 97.9], ['三島', 112.7],
-  ['沼津', 118.5], ['原', 124.3], ['吉原', 136.1], ['蒲原', 147.2], ['由比', 151.1], ['興津', 160.2],
-  ['江尻', 164.3], ['府中', 174.9], ['丸子', 180.5], ['岡部', 188.4], ['藤枝', 195.1], ['島田', 203.8],
-  ['金谷', 207.9], ['日坂', 214.4], ['掛川', 221.5], ['袋井', 230.9], ['見附', 236.8], ['浜松', 253.1],
-  ['舞坂', 263.9], ['新居', 269.8], ['白須賀', 276.3], ['二川', 282.1], ['吉田', 288.1], ['御油', 298.4],
-  ['赤坂', 300.1], ['藤川', 308.9], ['岡崎', 315.6], ['池鯉鮒', 330.6], ['鳴海', 341.6], ['宮', 348.2],
-  ['桑名', 375.8], ['四日市', 388.4], ['石薬師', 399.2], ['庄野', 402.0], ['亀山', 409.8], ['関', 415.7],
-  ['坂下', 422.2], ['土山', 431.9], ['水口', 442.4], ['石部', 455.9], ['草津', 467.6], ['大津', 482.0],
-  ['伏見', 500.0], ['淀', 508.0], ['枚方', 522.0]
+  ['日本橋', 0, 35.684, 139.775], ['品川', 7.8, 35.620, 139.740], ['川崎', 17.6, 35.533, 139.703],
+  ['神奈川', 27.5, 35.475, 139.630], ['保土ケ谷', 32.4, 35.445, 139.595], ['戸塚', 41.2, 35.398, 139.535],
+  ['藤沢', 49.2, 35.345, 139.490], ['平塚', 62.9, 35.330, 139.345], ['大磯', 65.6, 35.308, 139.315],
+  ['小田原', 81.2, 35.252, 139.155], ['箱根', 97.9, 35.195, 139.025], ['三島', 112.7, 35.120, 138.915],
+  ['沼津', 118.5, 35.098, 138.860], ['原', 124.3, 35.125, 138.795], ['吉原', 136.1, 35.160, 138.690],
+  ['蒲原', 147.2, 35.118, 138.600], ['由比', 151.1, 35.105, 138.555], ['興津', 160.2, 35.050, 138.520],
+  ['江尻', 164.3, 35.020, 138.490], ['府中', 174.9, 34.975, 138.385], ['丸子', 180.5, 34.945, 138.340],
+  ['岡部', 188.4, 34.915, 138.285], ['藤枝', 195.1, 34.870, 138.255], ['島田', 203.8, 34.835, 138.175],
+  ['金谷', 207.9, 34.820, 138.125], ['日坂', 214.4, 34.790, 138.060], ['掛川', 221.5, 34.770, 138.015],
+  ['袋井', 230.9, 34.750, 137.920], ['見附', 236.8, 34.715, 137.855], ['浜松', 253.1, 34.705, 137.730],
+  ['舞坂', 263.9, 34.690, 137.610], ['新居', 269.8, 34.690, 137.560], ['白須賀', 276.3, 34.690, 137.495],
+  ['二川', 282.1, 34.720, 137.440], ['吉田', 288.1, 34.765, 137.390], ['御油', 298.4, 34.835, 137.320],
+  ['赤坂', 300.1, 34.845, 137.305], ['藤川', 308.9, 34.920, 137.240], ['岡崎', 315.6, 34.955, 137.165],
+  ['池鯉鮒', 330.6, 35.000, 137.045], ['鳴海', 341.6, 35.080, 136.955], ['宮', 348.2, 35.120, 136.905],
+  ['桑名', 375.8, 35.065, 136.690], ['四日市', 388.4, 34.965, 136.620], ['石薬師', 399.2, 34.915, 136.545],
+  ['庄野', 402.0, 34.890, 136.520], ['亀山', 409.8, 34.855, 136.450], ['関', 415.7, 34.850, 136.390],
+  ['坂下', 422.2, 34.890, 136.330], ['土山', 431.9, 34.935, 136.280], ['水口', 442.4, 34.965, 136.170],
+  ['石部', 455.9, 35.005, 136.060], ['草津', 467.6, 35.020, 135.960], ['大津', 482.0, 35.010, 135.860],
+  ['伏見', 500.0, 34.935, 135.765], ['淀', 508.0, 34.905, 135.715], ['枚方', 522.0, 34.815, 135.650]
 ];
 const RUN_TRIP_TOTAL_KM = 522;
+
+// 緯度経度 → 日本地図画像(500x683)上の座標。
+// 日本縦断で調整済みの枚方・名古屋・東京の画像座標に、相似変換（拡大・回転・平行移動）を最小二乗で合わせる
+const tokaidoToMapPx = (() => {
+  const anchors = [
+    { lat: 34.815, lon: 135.650, px: JOURNEY_PLACES['枚方'] },
+    { lat: 35.170, lon: 136.900, px: JOURNEY_PLACES['名古屋'] },
+    { lat: 35.681, lon: 139.767, px: JOURNEY_PLACES['東京'] }
+  ];
+  const k = Math.cos(35.2 * Math.PI / 180);   // 経度1度の長さを緯度1度に揃える
+  const pts = anchors.map(a => ({ u: a.lon * k, v: a.lat, x: a.px.x, y: -a.px.y }));
+  const mean = key => pts.reduce((s, p) => s + p[key], 0) / pts.length;
+  const mu = mean('u'), mv = mean('v'), mx = mean('x'), my = mean('y');
+  let sa = 0, sb = 0, ss = 0;
+  pts.forEach(p => {
+    const du = p.u - mu, dv = p.v - mv, dx = p.x - mx, dy = p.y - my;
+    sa += du * dx + dv * dy; sb += du * dy - dv * dx; ss += du * du + dv * dv;
+  });
+  const a = sa / ss, b = sb / ss;
+  return (lat, lon) => {
+    const du = lon * k - mu, dv = lat - mv;
+    return { x: mx + a * du - b * dv, y: -(my + b * du + a * dv) };
+  };
+})();
+
 // 枚方宿からの距離に並べ替えた宿場一覧（no は日本橋から数えた宿番号、日本橋は 0）
 const RUN_TRIP_STOPS = TOKAIDO_FROM_NIHONBASHI
-  .map(([name, d], i) => ({ no: i, name, km: round1(RUN_TRIP_TOTAL_KM - d) }))
+  .map(([name, d, lat, lon], i) => ({ no: i, name, km: round1(RUN_TRIP_TOTAL_KM - d), px: tokaidoToMapPx(lat, lon) }))
   .reverse();
 
 function totalRunKm() {
@@ -1671,28 +1707,60 @@ function runTripHtml(km, monthKm) {
   let passed = RUN_TRIP_STOPS[0];
   RUN_TRIP_STOPS.forEach(s => { if (s.km <= pos) passed = s; });
   const next = RUN_TRIP_STOPS.find(s => s.km > pos) || goal;
-  const pct = Math.min(100, pos / goal.km * 100);
-  const stopsHtml = RUN_TRIP_STOPS.map(s => {
-    const reached = s.km <= pos;
-    return '<span title="' + s.name + '" style="position:absolute;left:' + (s.km / goal.km * 100) + '%;top:50%;transform:translate(-50%,-50%);width:5px;height:5px;border-radius:50%;background:' +
-      (reached ? 'var(--accent)' : 'var(--border)') + ';"></span>';
-  }).join('');
   return '<p style="margin:0 0 4px;font-size:17px;font-weight:800;">' +
     (lap > 1 ? '<span class="mini-chip c-amber" style="margin-right:6px;">' + lap + '周目</span>' : '') +
     (pos === 0 && lap > 1 ? '🎉 江戸・日本橋に到着！' : '📍 ' + stationLabel(passed) + (passed.km === 0 ? 'を出発' : 'を通過')) + '</p>' +
     '<p style="margin:0 0 10px;font-size:14px;color:var(--text-secondary);">次は' + stationLabel(next) + 'まで あと' + round1(next.km - pos) + 'km' +
     ' ・ 累計' + round1(km) + 'km' + (monthKm ? '（今月 +' + round1(monthKm) + 'km）' : '') + '</p>' +
-    '<div style="position:relative;height:14px;margin:0 4px;">' +
-      '<div style="position:absolute;left:0;right:0;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--border);"></div>' +
-      '<div style="position:absolute;left:0;width:' + pct + '%;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--accent);"></div>' +
-      stopsHtml +
-      '<span style="position:absolute;left:' + pct + '%;top:50%;transform:translate(-50%,-60%);font-size:16px;">🏃</span>' +
-    '</div>' +
-    // 目盛りの地名は実際の距離の位置に置く（端の地名ははみ出さないよう寄せる）
-    '<div style="position:relative;height:16px;margin:4px 4px 0;font-size:12px;color:var(--text-muted);">' +
-      [['枚方', 0, 'translateX(0)'],['宮', 173.8, 'translateX(-50%)'], ['浜松', 268.9, 'translateX(-50%)'], ['箱根', 424.1, 'translateX(-50%)'], ['日本橋', goal.km, 'translateX(-100%)']]
-        .map(([n, k, t]) => '<span style="position:absolute;left:' + (k / goal.km * 100) + '%;transform:' + t + ';white-space:nowrap;">' + n + '</span>').join('') +
-    '</div>';
+    runTripMapSvg(pos, passed, next);
+}
+
+// 日本地図画像から東海道のあたりを切り出し、宿場・ルート・現在地を重ねて描く
+function runTripMapSvg(pos, passed, next) {
+  const stops = RUN_TRIP_STOPS;
+  const xs = stops.map(s => s.px.x), ys = stops.map(s => s.px.y);
+  const pad = 8;
+  let minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+  let minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+  // 横長になりすぎないよう、高さを幅の半分以上にする
+  const w = maxX - minX;
+  if (maxY - minY < w * 0.5) {
+    const cy = (minY + maxY) / 2;
+    minY = cy - w * 0.25; maxY = cy + w * 0.25;
+  }
+  const h = maxY - minY;
+
+  // 現在地：通過した宿と次の宿の間を距離の割合で内分する
+  const seg = next.km - passed.km;
+  const t = seg > 0 ? Math.min(1, (pos - passed.km) / seg) : 0;
+  const cur = { x: passed.px.x + (next.px.x - passed.px.x) * t, y: passed.px.y + (next.px.y - passed.px.y) * t };
+
+  const pt = p => p.x.toFixed(1) + ',' + p.y.toFixed(1);
+  const allLine = stops.map(s => pt(s.px)).join(' ');
+  const doneLine = stops.filter(s => s.km <= pos).map(s => pt(s.px)).concat(pt(cur)).join(' ');
+  const dots = stops.map(s => {
+    const reached = s.km <= pos;
+    return '<circle cx="' + s.px.x.toFixed(1) + '" cy="' + s.px.y.toFixed(1) + '" r="0.9" fill="' + (reached ? 'var(--accent)' : '#fff') +
+      '" stroke="' + (reached ? 'var(--accent)' : '#666') + '" stroke-width="0.35"><title>' + stationLabel(s) + '</title></circle>';
+  }).join('');
+  // 主な宿場と「次の宿」に地名を出す（文字は縁取りして地図の上でも読めるように）
+  const labelNames = ['枚方', '大津', '宮', '浜松', '箱根', '日本橋'];
+  const labels = stops.filter(s => labelNames.includes(s.name) || s === next).map(s => {
+    const isNext = s === next;
+    return '<text x="' + s.px.x.toFixed(1) + '" y="' + (s.px.y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="' + (isNext ? 3.4 : 3) +
+      '" font-weight="' + (isNext ? 800 : 600) + '" fill="' + (isNext ? 'var(--accent)' : '#222') +
+      '" stroke="#fff" stroke-width="0.9" paint-order="stroke">' + (isNext ? '次: ' : '') + s.name + '</text>';
+  }).join('');
+
+  return '<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);">' +
+    '<svg viewBox="' + minX.toFixed(1) + ' ' + minY.toFixed(1) + ' ' + w.toFixed(1) + ' ' + h.toFixed(1) + '" style="width:100%;display:block;">' +
+      '<image href="500px-Japan_topographic_blank_map.jpg" x="0" y="0" width="500" height="683" preserveAspectRatio="none"/>' +
+      '<polyline points="' + allLine + '" fill="none" stroke="#777" stroke-width="0.7" stroke-dasharray="1.4 1" stroke-linejoin="round"/>' +
+      '<polyline points="' + doneLine + '" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>' +
+      dots + labels +
+      '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="3.2" fill="var(--coral)" fill-opacity="0.25"/>' +
+      '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="1.8" fill="var(--coral)" stroke="#fff" stroke-width="0.6"><title>現在地</title></circle>' +
+    '</svg></div>';
 }
 
 function formatMinutes(min) {
