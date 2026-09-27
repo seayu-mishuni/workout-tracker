@@ -3705,6 +3705,12 @@ function renderPlanRun() {
     ? '<p style="margin:0 0 10px;font-size:14px;color:var(--text-muted);">前回（' + fmtDateLabel(prevLog.date) + '）: ' + prevText + '</p>'
     : '';
 
+  // このセットの後に何が残るかでボタン名を変える（最後のセットなのに「次のセット」と出ないように）
+  const restAfter = remainingQueueItems().filter(r => r.i !== activeRun.currentIndex);
+  const nextLabel = restAfter.length === 0 ? '記録して終了'
+    : restAfter.some(r => r.item.name === cur.name) ? '次のセット'
+    : '次の種目へ';
+
   view.innerHTML =
     '<div class="card" style="border:2px solid var(--accent);">' +
     '<p style="margin:0;font-size:15px;color:var(--text-muted);">プラン実行中: ' + escapeHtml(activeRun.planName) +
@@ -3715,7 +3721,7 @@ function renderPlanRun() {
     prevHtml +
     '<label class="field-label">実際の記録</label>' +
     actualFieldsHtml +
-    '<button class="primary" onclick="nextSet()">次のセット</button>' +
+    '<button class="primary" onclick="nextSet()">' + nextLabel + '</button>' +
     '<button class="ghost" style="margin-top:8px;" onclick="skipExercise(' + activeRun.currentIndex + ')">⏭ この種目の残りをスキップ</button>' +
     '</div>' +
     '<div class="card">' + queueListHtml + '</div>' +
