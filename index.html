@@ -391,7 +391,7 @@
       </div>
 
       <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">🏋 重量チャレンジ</p>
+        <p class="field-label" style="margin-bottom:8px;">⛰ 重量クライム（持ち上げた重さで山を登る）</p>
         <div id="weight-challenge-body"></div>
       </div>
 
@@ -747,23 +747,24 @@ const RUN_EXERCISE_NAME = 'ランニング(屋外)';
 // 実際の緯度経度ではなく、この画像上のピクセル位置(px)を直接使う。
 // 枚方市を出発し、北の端(宗谷岬)へ→折り返して南の端(佐多岬)へ→枚方市へ戻る往復ルート。
 // side/minZoom は地名ラベルの出し方。近接する地点は逆側に振り、
-// それでも重なるものは拡大したときだけ表示する
+// それでも重なるものは拡大したときだけ表示する。
+// x/y は地図画像の海岸線（岬・湾の奥）から求めた変換で計算し、海沿いの街は陸に乗るよう微調整した値
 const JOURNEY_PLACES = {
-  '枚方':   { x: 241.0, y: 411.5, side: 'left', dy: -0.75 },
-  '大阪':   { x: 239.5, y: 414.0, side: 'left', dy: 0.75, minZoom: 3 },
-  '名古屋': { x: 262.7, y: 397.0 },
-  '東京':   { x: 345.8, y: 377.0 },
-  '仙台':   { x: 350.5, y: 300.5 },
-  '青森':   { x: 340.0, y: 227.0 },
-  '函館':   { x: 336.5, y: 198.5 },
-  '札幌':   { x: 343.0, y: 158.0 },
-  '宗谷岬': { x: 345.8, y: 80.5 },
-  '広島':   { x: 160.3, y: 422.0 },
-  '下関':   { x: 136.7, y: 433.3, side: 'left', minZoom: 2.5 },
-  '福岡':   { x: 130.8, y: 439.2, side: 'left' },
-  '熊本':   { x: 121.7, y: 464.2, side: 'left' },
-  '鹿児島': { x: 119.8, y: 512.0, side: 'left' },
-  '佐多岬': { x: 124.0, y: 526.0 }
+  '枚方':   { x: 235.0, y: 411.5, side: 'left', dy: -0.75 },
+  '大阪':   { x: 231.5, y: 415.0, side: 'left', dy: 0.75, minZoom: 3 },
+  '名古屋': { x: 265.0, y: 399.0 },
+  '東京':   { x: 335.5, y: 378.5 },
+  '仙台':   { x: 352.5, y: 298.0 },
+  '青森':   { x: 338.0, y: 223.0 },
+  '函館':   { x: 334.0, y: 195.5 },
+  '札幌':   { x: 343.0, y: 155.0 },
+  '宗谷岬': { x: 345.0, y: 81.5 },
+  '広島':   { x: 158.5, y: 428.5 },
+  '下関':   { x: 123.0, y: 441.0, side: 'left', minZoom: 2.5 },
+  '福岡':   { x: 111.0, y: 451.5, side: 'left' },
+  '熊本':   { x: 116.0, y: 475.0, side: 'left' },
+  '鹿児島': { x: 114.0, y: 510.5, side: 'left' },
+  '佐多岬': { x: 118.5, y: 527.0 }
 };
 function journeyLeg(name, km) { return { name: name, km: km, px: JOURNEY_PLACES[name] }; }
 const JOURNEY_ROUTE = {
@@ -2605,69 +2606,117 @@ function renderJourney() {
     '<p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">' + route.name + '・全行程' + formatInt(progress.routeKm) + 'km</p>';
 }
 
-/* ---------- 重量チャレンジ ---------- */
+/* ---------- 重量クライム ---------- */
 
-// 軽い順。名前・重さ(kg)・絵文字。値は代表的な目安（個体差あり）
-const WEIGHT_MILESTONES = [
-  { name: 'ランドセル',   kg: 1.2,      emoji: '🎒' },
-  { name: '成人ひとり',   kg: 60,       emoji: '🧍' },
-  { name: '軽自動車',     kg: 700,      emoji: '🚗' },
-  { name: 'ホッキョクグマ', kg: 500,    emoji: '🐻‍❄️' },
-  { name: 'グランドピアノ', kg: 450,    emoji: '🎹' },
-  { name: 'アフリカゾウ', kg: 6000,     emoji: '🐘' },
-  { name: '大型トラック', kg: 10000,    emoji: '🚛' },
-  { name: '新幹線1両',    kg: 40000,    emoji: '🚄' },
-  { name: 'ボーイング747(空虚重量)', kg: 180000, emoji: '✈️' },
-  { name: '自由の女神像', kg: 204000,   emoji: '🗽' },
-  { name: '東京タワー',   kg: 4000000,  emoji: '🗼' }
-].sort((a, b) => a.kg - b.kg);
+// 筋トレで持ち上げた重さを「自分の体を何m持ち上げたか」に換算して標高にし、低い山から順に登る。
+// エベレストを越えたら東海道ランと同じく2周目として生駒山から登り直す
+const CLIMB_PEAKS = [
+  { name: '生駒山', m: 642 }, { name: '六甲山', m: 931 }, { name: '金剛山', m: 1125 },
+  { name: '伊吹山', m: 1377 }, { name: '大山', m: 1729 }, { name: '石鎚山', m: 1982 },
+  { name: '八ヶ岳(赤岳)', m: 2899 }, { name: '槍ヶ岳', m: 3180 }, { name: '富士山', m: 3776 },
+  { name: 'モンブラン', m: 4808 }, { name: 'キリマンジャロ', m: 5895 }, { name: 'アコンカグア', m: 6961 },
+  { name: 'エベレスト', m: 8849 }
+];
+const CLIMB_LAP_M = CLIMB_PEAKS[CLIMB_PEAKS.length - 1].m;
+const CLIMB_STROKE_M = 0.5;    // 筋トレ1回で重りを動かす距離の目安
+const CLIMB_BODY_REP_M = 0.3;  // 自重1回で体を持ち上げる高さの目安
 
-// 筋トレ(重量×回数)の総ボリュームを全期間で合計する
-function weightChallengeTotalKg() {
-  let kg = 0;
-  workoutLogs.forEach(l => {
-    if (!isStrengthLog(l)) return;
-    l.sets.forEach(s => { if (s.weight && s.reps) kg += s.weight * s.reps; });
-  });
-  return kg;
+// 1件のログで登った高さ(m)。体重はそのログの日付時点のものを使い、あとで体重が変わっても過去分は変えない
+function climbLogM(l) {
+  if (l.type === 'reps') return l.sets.reduce((s, x) => s + (x.reps || 0), 0) * CLIMB_BODY_REP_M;
+  if (!isStrengthLog(l)) return 0;
+  const bw = latestWeightKg(l.date);
+  return l.sets.reduce((s, x) => s + (x.weight && x.reps ? x.weight * x.reps : 0), 0) * CLIMB_STROKE_M / bw;
 }
 
-// 換算対象は「1個分以上」達成した中で一番重いものを選ぶ（無ければ一番軽いもの）
-function weightChallengePickTier(totalKg) {
-  for (let i = WEIGHT_MILESTONES.length - 1; i >= 0; i--) {
-    if (totalKg >= WEIGHT_MILESTONES[i].kg) return i;
-  }
-  return 0;
+// 標高 h までに登頂した山の数（周回分を含む）
+function climbSummitCount(h) {
+  const lap = Math.floor(h / CLIMB_LAP_M);
+  return lap * CLIMB_PEAKS.length + CLIMB_PEAKS.filter(p => p.m <= h - lap * CLIMB_LAP_M).length;
+}
+
+// いま登っている山の断面。登った部分は太線、残りは点線、現在地は東海道ランと同じ丸で描く
+function climbMountainSvg(peak, pos) {
+  const f = Math.min(1, pos / peak.m);
+  const foot = { x: 20, y: 140 }, top = { x: 150, y: 24 };
+  const at = t => ({ x: foot.x + (top.x - foot.x) * t, y: foot.y + (top.y - foot.y) * t });
+  const cur = at(f);
+  const pt = p => p.x.toFixed(1) + ',' + p.y.toFixed(1);
+  // 現在地の標高はふつう丸の左に書くが、ふもと近くでは左端で切れるので右に書く
+  const labelLeft = cur.x > 95;
+  // 2,500m以上の山は山頂付近に雪を描く
+  const snow = peak.m >= 2500
+    ? '<polygon points="' + pt(at(0.78)) + ' ' + pt(top) + ' ' + (300 - at(0.78).x).toFixed(1) + ',' + at(0.78).y.toFixed(1) +
+      ' 172,' + (at(0.78).y - 4).toFixed(1) + ' 160,' + (at(0.78).y + 3).toFixed(1) + ' 148,' + (at(0.78).y - 3).toFixed(1) +
+      ' 136,' + (at(0.78).y + 3).toFixed(1) + '" fill="#e8f0ea"/>'
+    : '';
+  return '<svg viewBox="0 0 300 150" style="display:block;width:100%;margin-top:4px;">' +
+    '<polygon points="' + pt(foot) + ' ' + pt(top) + ' 280,140" fill="#23382a" stroke="#3a5a44" stroke-width="1"/>' +
+    snow +
+    '<line x1="8" y1="140" x2="292" y2="140" stroke="var(--border-strong)" stroke-width="1"/>' +
+    '<polyline points="' + pt(cur) + ' ' + pt(top) + '" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>' +
+    (f > 0 ? '<polyline points="' + pt(foot) + ' ' + pt(cur) + '" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>' : '') +
+    '<text x="150" y="15" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">' + escapeHtml(peak.name) + ' ' + formatInt(peak.m) + 'm</text>' +
+    '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="11" fill="var(--coral)" fill-opacity="0.25"/>' +
+    '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="6" fill="var(--coral)" stroke="#fff" stroke-width="2"/>' +
+    '<text x="' + (cur.x + (labelLeft ? -12 : 12)).toFixed(1) + '" y="' + (cur.y + (labelLeft ? 4 : 16)).toFixed(1) + '" text-anchor="' + (labelLeft ? 'end' : 'start') + '" font-size="12" font-weight="700" fill="var(--text)" stroke="var(--card)" stroke-width="3" paint-order="stroke">いま ' + formatInt(pos) + 'm</text>' +
+    '</svg>';
 }
 
 function renderWeightChallenge() {
   const el = document.getElementById('weight-challenge-body');
   if (!el) return;
-  const totalKg = weightChallengeTotalKg();
-  const tierIdx = weightChallengePickTier(totalKg);
-  const tier = WEIGHT_MILESTONES[tierIdx];
-  const count = totalKg / tier.kg;
-  const wholeCount = Math.floor(count);
-  const frac = count - wholeCount;
-  const next = WEIGHT_MILESTONES[tierIdx + 1];
+  let h = 0, totalKg = 0, weekM = 0, monthM = 0;
+  const weekAgo = daysAgoStr(6), monthAgo = daysAgoStr(29);
+  const monthDays = new Set();
+  workoutLogs.forEach(l => {
+    const m = climbLogM(l);
+    h += m;
+    if (isStrengthLog(l)) l.sets.forEach(s => { if (s.weight && s.reps) totalKg += s.weight * s.reps; });
+    if (m > 0 && l.date >= weekAgo) weekM += m;
+    if (m > 0 && l.date >= monthAgo) { monthM += m; monthDays.add(l.date); }
+  });
+  if (h <= 0) {
+    el.innerHTML = '<span style="font-size:15px;color:var(--text-muted);">まだ登り始めていません。筋トレの記録で生駒山(642m)を目指します ⛰</span>';
+    return;
+  }
 
-  const stackCount = Math.min(wholeCount, 12);
-  const stack = (stackCount > 0 ? tier.emoji.repeat(stackCount) : '') +
-    (frac > 0.05 ? '<span style="opacity:0.35;">' + tier.emoji + '</span>' : '');
-  const overflow = wholeCount > 12 ? ' 他' + formatInt(wholeCount - 12) + '個' : '';
+  const lap = Math.floor(h / CLIMB_LAP_M) + 1;
+  const pos = h % CLIMB_LAP_M;
+  const idx = CLIMB_PEAKS.findIndex(p => p.m > pos);
+  const peak = CLIMB_PEAKS[idx];
+  const rest = peak.m - pos;
 
-  const nextHtml = next
-    ? '<p style="margin:10px 0 0;font-size:14px;color:var(--text-muted);">次は' + next.emoji + escapeHtml(next.name) +
-      '（' + formatInt(next.kg) + 'kg）・あと' + formatInt(Math.max(0, next.kg - totalKg)) + 'kg</p>'
-    : '<p style="margin:10px 0 0;font-size:14px;color:var(--text-muted);">最大ランクに到達しました🎉</p>';
+  // 直近7日で新しく登頂していれば、最後に登頂した山を祝う
+  let head = '📍 第' + (idx + 1) + '座 ' + escapeHtml(peak.name) + 'を登山中';
+  if (climbSummitCount(h) > climbSummitCount(h - weekM)) {
+    const last = idx > 0 ? CLIMB_PEAKS[idx - 1] : CLIMB_PEAKS[CLIMB_PEAKS.length - 1];
+    head = '🎉 ' + escapeHtml(last.name) + '(' + formatInt(last.m) + 'm)に登頂！';
+  }
+
+  const avgPerDay = monthDays.size ? monthM / monthDays.size : 0;
+  const etaHtml = avgPerDay > 0
+    ? '<p style="margin:0 0 4px;font-size:13px;color:var(--text-muted);">目安 あと約' + Math.max(1, Math.ceil(rest / avgPerDay)) + '回のトレーニングで山頂（直近30日の平均 1回' + formatInt(avgPerDay) + 'm）</p>'
+    : '';
+
+  // 一覧は 次の山・いまの山・登頂済みの直近2つ（高い順）
+  const row = (label, p, color, weight) =>
+    '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:14px;color:' + color + ';font-weight:' + weight + ';">' +
+    '<span>' + label + ' ' + escapeHtml(p.name) + '</span><span>' + formatInt(p.m) + 'm</span></div>';
+  let list = '';
+  if (CLIMB_PEAKS[idx + 1]) list += row('⛳ 次', CLIMB_PEAKS[idx + 1], 'var(--text-muted)', 400);
+  list += row('⛰ いま', peak, 'var(--text)', 800);
+  for (let i = idx - 1; i >= Math.max(0, idx - 2); i--) list += row('✅', CLIMB_PEAKS[i], 'var(--green-text)', 400);
 
   el.innerHTML =
-    '<div class="row">' +
-    '<div class="stat"><p>総重量(全期間)</p><p>' + formatInt(totalKg) + '<span class="unit">kg</span></p></div>' +
-    '<div class="stat" style="min-width:0;"><p>換算</p><p style="font-size:20px;white-space:normal;word-break:break-word;">' + tier.emoji + ' ' + round1(count) + '<span class="unit">' + escapeHtml(tier.name) + '分</span></p></div>' +
-    '</div>' +
-    '<p style="margin:12px 0 0;font-size:26px;line-height:1.4;word-break:break-all;">' + (stack || '<span style="color:var(--text-muted);font-size:15px;">まだ記録がありません</span>') + overflow + '</p>' +
-    nextHtml;
+    '<p style="margin:0 0 4px;font-size:17px;font-weight:800;">' +
+      (lap > 1 ? '<span class="mini-chip c-amber" style="margin-right:6px;">' + lap + '周目</span>' : '') + head + '</p>' +
+    '<p style="margin:0 0 4px;font-size:14px;color:var(--text-secondary);">標高 ' + formatInt(pos) + 'm ・ 山頂まで あと' + formatInt(rest) + 'm' +
+      (weekM > 0 ? ' ・ 今週 +' + formatInt(weekM) + 'm' : '') + '</p>' +
+    etaHtml +
+    climbMountainSvg(peak, pos) +
+    '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' + list + '</div>' +
+    '<p style="margin:8px 0 0;font-size:12px;color:var(--text-muted);">総重量 ' + formatInt(totalKg) + 'kg ・ 重さ×回数×' + CLIMB_STROKE_M + 'm÷体重（自重は1回' + CLIMB_BODY_REP_M + 'm）で換算</p>';
 }
 
 function onJourneySettingsChange() {
