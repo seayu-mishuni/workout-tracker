@@ -1669,27 +1669,47 @@ const TOKAIDO_FROM_NIHONBASHI = [
 const RUN_TRIP_TOTAL_KM = 522;
 
 // 緯度経度 → 日本地図画像(500x683)上の座標。
-// 日本縦断で調整済みの枚方・名古屋・東京の画像座標に、相似変換（拡大・回転・平行移動）を最小二乗で合わせる
+// 地図画像の海岸線から読み取った基準点（[緯度, 経度, 画像x, 画像y]）に、アフィン変換を最小二乗で合わせる。
+// 日本縦断用の JOURNEY_PLACES は日本全体を見る前提の目安なので、東海道の縮尺では東京付近が東にずれてしまう
 const tokaidoToMapPx = (() => {
   const anchors = [
-    { lat: 34.815, lon: 135.650, px: JOURNEY_PLACES['枚方'] },
-    { lat: 35.170, lon: 136.900, px: JOURNEY_PLACES['名古屋'] },
-    { lat: 35.681, lon: 139.767, px: JOURNEY_PLACES['東京'] }
+    [34.650, 135.430, 229.5, 416.5],   // 大阪港
+    [35.050, 136.860, 264.0, 403.5],   // 名古屋港（伊勢湾の奥）
+    [34.580, 137.020, 271.5, 415.0],   // 伊良湖岬
+    [34.595, 138.225, 298.0, 413.0],   // 御前崎
+    [34.600, 138.845, 314.5, 412.8],   // 石廊崎
+    [35.080, 138.850, 312.5, 398.5],   // 沼津（駿河湾の奥）
+    [35.250, 139.155, 322.0, 391.0],   // 小田原
+    [35.660, 139.770, 336.0, 379.8],   // 築地（東京湾の奥）
+    [35.450, 139.640, 333.0, 385.0]    // 横浜
   ];
-  const k = Math.cos(35.2 * Math.PI / 180);   // 経度1度の長さを緯度1度に揃える
-  const pts = anchors.map(a => ({ u: a.lon * k, v: a.lat, x: a.px.x, y: -a.px.y }));
-  const mean = key => pts.reduce((s, p) => s + p[key], 0) / pts.length;
-  const mu = mean('u'), mv = mean('v'), mx = mean('x'), my = mean('y');
-  let sa = 0, sb = 0, ss = 0;
-  pts.forEach(p => {
-    const du = p.u - mu, dv = p.v - mv, dx = p.x - mx, dy = p.y - my;
-    sa += du * dx + dv * dy; sb += du * dy - dv * dx; ss += du * du + dv * dv;
-  });
-  const a = sa / ss, b = sb / ss;
-  return (lat, lon) => {
-    const du = lon * k - mu, dv = lat - mv;
-    return { x: mx + a * du - b * dv, y: -(my + b * du + a * dv) };
+  // 画像座標 = c0 + c1 * 経度 + c2 * 緯度 の係数を正規方程式（3元連立）で求める
+  const fit = col => {
+    const m = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], v = [0, 0, 0];
+    anchors.forEach(a => {
+      const f = [1, a[1], a[0]];
+      for (let i = 0; i < 3; i++) {
+        v[i] += f[i] * a[col];
+        for (let j = 0; j < 3; j++) m[i][j] += f[i] * f[j];
+      }
+    });
+    for (let i = 0; i < 3; i++) {
+      for (let r = i + 1; r < 3; r++) {
+        const t = m[r][i] / m[i][i];
+        for (let j = i; j < 3; j++) m[r][j] -= t * m[i][j];
+        v[r] -= t * v[i];
+      }
+    }
+    const c = [0, 0, 0];
+    for (let i = 2; i >= 0; i--) {
+      let s = v[i];
+      for (let j = i + 1; j < 3; j++) s -= m[i][j] * c[j];
+      c[i] = s / m[i][i];
+    }
+    return c;
   };
+  const cx = fit(2), cy = fit(3);
+  return (lat, lon) => ({ x: cx[0] + cx[1] * lon + cx[2] * lat, y: cy[0] + cy[1] * lon + cy[2] * lat });
 })();
 
 // 枚方宿からの距離に並べ替えた宿場一覧（no は日本橋から数えた宿番号、日本橋は 0）
