@@ -2635,32 +2635,116 @@ function climbSummitCount(h) {
   return lap * CLIMB_PEAKS.length + CLIMB_PEAKS.filter(p => p.m <= h - lap * CLIMB_LAP_M).length;
 }
 
-// いま登っている山の断面。登った部分は太線、残りは点線、現在地は東海道ランと同じ丸で描く
-function climbMountainSvg(peak, pos) {
+// 山名から決まる疑似乱数（同じ山はいつも同じ稜線の形になるように）
+function climbRand(seed) {
+  let s = 0;
+  for (const ch of seed) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+// 裾野 (cx±hw, baseY) から山頂 (cx, topY) までのギザギザの稜線を多角形の点列で返す
+function climbRidge(cx, hw, topY, baseY, seed) {
+  const rnd = climbRand(seed);
+  const pts = [[cx - hw, baseY]];
+  for (let i = 1; i < 6; i++) {
+    const t = i / 6;
+    pts.push([cx - hw * (1 - t) + (rnd() - 0.5) * 6, baseY - (baseY - topY) * t + (rnd() - 0.3) * 7]);
+  }
+  pts.push([cx, topY]);
+  for (let i = 5; i >= 1; i--) {
+    const t = i / 6;
+    pts.push([cx + hw * (1 - t) + (rnd() - 0.5) * 6, baseY - (baseY - topY) * t + (rnd() - 0.3) * 7]);
+  }
+  pts.push([cx + hw, baseY]);
+  return pts;
+}
+
+// いま登っている山の景色。奥に登頂済みの山と次の山、手前に今の山を描き、
+// ジグザグの登山道の登った部分を太線、残りを点線にして、現在地は東海道ランと同じ丸で示す
+function climbMountainSvg(idx, pos) {
+  const peak = CLIMB_PEAKS[idx], prev = CLIMB_PEAKS[idx - 1], next = CLIMB_PEAKS[idx + 1];
+  const W = 320, baseY = 168, topY = 46, cx = 160, hw = 120;
+  const scale = (baseY - topY) / peak.m;   // 標高1mあたりの高さ(px)
   const f = Math.min(1, pos / peak.m);
-  const foot = { x: 20, y: 140 }, top = { x: 150, y: 24 };
-  const at = t => ({ x: foot.x + (top.x - foot.x) * t, y: foot.y + (top.y - foot.y) * t });
-  const cur = at(f);
-  const pt = p => p.x.toFixed(1) + ',' + p.y.toFixed(1);
-  // 現在地の標高はふつう丸の左に書くが、ふもと近くでは左端で切れるので右に書く
-  const labelLeft = cur.x > 95;
-  // 2,500m以上の山は山頂付近に雪を描く
+  const pts = arr => arr.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+  // 奥の山（高さは今の山と同じ縮尺。次の山は上にはみ出さないよう抑える）
+  const backPeak = (p, bx, bhw, labelAnchor) => {
+    const ty = Math.max(16, baseY - p.m * scale);
+    return '<polygon points="' + pts(climbRidge(bx, bhw, ty, baseY, p.name)) + '" fill="#1b2a21" stroke="#2c4034" stroke-width="1"/>' +
+      '<text x="' + bx + '" y="' + (ty - 5).toFixed(1) + '" text-anchor="' + labelAnchor + '" font-size="10" fill="var(--text-muted)">' +
+      escapeHtml(p.name) + ' ' + formatInt(p.m) + 'm</text>';
+  };
+  const back = (prev ? backPeak(prev, 46, 70, 'middle') : '') + (next ? backPeak(next, 278, 82, 'middle') : '');
+
+  // 手前の山。右半分に影を落として立体感を出す
+  const ridge = climbRidge(cx, hw, topY, baseY, peak.name + '*');
+  const rightHalf = ridge.slice(6);
+  const shade = '<polygon points="' + pts(rightHalf.concat([[cx + 8, baseY]])) + '" fill="#000" fill-opacity="0.22"/>';
+  // 2,500m以上の山は山頂付近に雪を描く（稜線の上から3点ずつ＋ギザギザの下端）
+  const snowY = topY + (baseY - topY) * 0.26;
   const snow = peak.m >= 2500
-    ? '<polygon points="' + pt(at(0.78)) + ' ' + pt(top) + ' ' + (300 - at(0.78).x).toFixed(1) + ',' + at(0.78).y.toFixed(1) +
-      ' 172,' + (at(0.78).y - 4).toFixed(1) + ' 160,' + (at(0.78).y + 3).toFixed(1) + ' 148,' + (at(0.78).y - 3).toFixed(1) +
-      ' 136,' + (at(0.78).y + 3).toFixed(1) + '" fill="#e8f0ea"/>'
+    ? '<polygon points="' + pts([ridge[5], ridge[6], ridge[7],
+        [cx + hw * 0.2, snowY + 2], [cx + 10, snowY - 5], [cx - 2, snowY + 4], [cx - 14, snowY - 4], [cx - hw * 0.2, snowY + 2]]) +
+      '" fill="#e8f0ea" fill-opacity="0.92"/>'
     : '';
-  return '<svg viewBox="0 0 300 150" style="display:block;width:100%;margin-top:4px;">' +
-    '<polygon points="' + pt(foot) + ' ' + pt(top) + ' 280,140" fill="#23382a" stroke="#3a5a44" stroke-width="1"/>' +
-    snow +
-    '<line x1="8" y1="140" x2="292" y2="140" stroke="var(--border-strong)" stroke-width="1"/>' +
-    '<polyline points="' + pt(cur) + ' ' + pt(top) + '" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>' +
-    (f > 0 ? '<polyline points="' + pt(foot) + ' ' + pt(cur) + '" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>' : '') +
-    '<text x="150" y="15" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">' + escapeHtml(peak.name) + ' ' + formatInt(peak.m) + 'm</text>' +
-    '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="11" fill="var(--coral)" fill-opacity="0.25"/>' +
-    '<circle cx="' + cur.x.toFixed(1) + '" cy="' + cur.y.toFixed(1) + '" r="6" fill="var(--coral)" stroke="#fff" stroke-width="2"/>' +
-    '<text x="' + (cur.x + (labelLeft ? -12 : 12)).toFixed(1) + '" y="' + (cur.y + (labelLeft ? 4 : 16)).toFixed(1) + '" text-anchor="' + (labelLeft ? 'end' : 'start') + '" font-size="12" font-weight="700" fill="var(--text)" stroke="var(--card)" stroke-width="3" paint-order="stroke">いま ' + formatInt(pos) + 'm</text>' +
+
+  // ジグザグの登山道。各折り返し点の高さは等間隔なので、標高からそのまま現在地を求められる
+  const N = 6, trail = [];
+  for (let k = 0; k <= N; k++) {
+    const u = k / N;
+    const side = k === N ? 0 : (k % 2 === 0 ? -1 : 1);
+    trail.push([cx + side * hw * (1 - u) * 0.5, baseY - 4 - (baseY - 4 - topY) * u]);
+  }
+  const seg = Math.min(N - 1, Math.floor(f * N)), t = f * N - seg;
+  const cur = [trail[seg][0] + (trail[seg + 1][0] - trail[seg][0]) * t, trail[seg][1] + (trail[seg + 1][1] - trail[seg][1]) * t];
+  const done = trail.slice(0, seg + 1).concat([cur]);
+  const todo = [cur].concat(trail.slice(seg + 1));
+  // 現在地の標高は丸の左に書くが、左端で切れそうなら右に書く
+  const labelLeft = cur[0] > 100;
+
+  const stars = [[22, 18], [64, 30], [104, 12], [214, 22], [252, 10], [300, 34], [140, 26], [186, 8]]
+    .map(([x, y], i) => '<circle cx="' + x + '" cy="' + y + '" r="' + (i % 3 === 0 ? 1.3 : 0.8) + '" fill="#fff" fill-opacity="' + (i % 2 ? 0.5 : 0.8) + '"/>').join('');
+
+  return '<svg viewBox="0 0 ' + W + ' 180" style="display:block;width:100%;margin-top:6px;border-radius:10px;">' +
+    '<defs>' +
+      '<linearGradient id="climb-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1d2b"/><stop offset="1" stop-color="#18261e"/></linearGradient>' +
+      '<linearGradient id="climb-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a6f5f"/><stop offset="0.45" stop-color="#34543e"/><stop offset="1" stop-color="#1f3a28"/></linearGradient>' +
+    '</defs>' +
+    '<rect x="0" y="0" width="' + W + '" height="180" fill="url(#climb-sky)"/>' + stars +
+    back +
+    '<polygon points="' + pts(ridge) + '" fill="url(#climb-rock)" stroke="#6f8a76" stroke-width="0.8" stroke-linejoin="round"/>' +
+    shade + snow +
+    '<rect x="0" y="' + baseY + '" width="' + W + '" height="' + (180 - baseY) + '" fill="#121a15"/>' +
+    '<polyline points="' + pts(todo) + '" fill="none" stroke="#e8f0ea" stroke-opacity="0.55" stroke-width="1.6" stroke-dasharray="3 4" stroke-linejoin="round"/>' +
+    (f > 0 ? '<polyline points="' + pts(done) + '" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+    // 山頂の旗と山名
+    '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY - 16) + '" stroke="#e8f0ea" stroke-width="1.5"/>' +
+    '<polygon points="' + cx + ',' + (topY - 16) + ' ' + (cx + 13) + ',' + (topY - 12) + ' ' + cx + ',' + (topY - 8) + '" fill="var(--amber)"/>' +
+    '<text x="' + cx + '" y="' + (topY - 21) + '" text-anchor="middle" font-size="13" font-weight="800" fill="var(--text)" stroke="#0c1d2b" stroke-width="3" paint-order="stroke">' +
+      escapeHtml(peak.name) + ' ' + formatInt(peak.m) + 'm</text>' +
+    // 現在地（ゆっくり脈打つ輪）
+    '<circle cx="' + cur[0].toFixed(1) + '" cy="' + cur[1].toFixed(1) + '" r="10" fill="var(--coral)" fill-opacity="0.3">' +
+      '<animate attributeName="r" values="7;14;7" dur="2.4s" repeatCount="indefinite"/>' +
+      '<animate attributeName="fill-opacity" values="0.45;0.05;0.45" dur="2.4s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="' + cur[0].toFixed(1) + '" cy="' + cur[1].toFixed(1) + '" r="5.5" fill="var(--coral)" stroke="#fff" stroke-width="2"/>' +
+    '<text x="' + (cur[0] + (labelLeft ? -12 : 12)).toFixed(1) + '" y="' + (cur[1] + 4).toFixed(1) + '" text-anchor="' + (labelLeft ? 'end' : 'start') +
+      '" font-size="12" font-weight="800" fill="#fff" stroke="#10201a" stroke-width="3.5" paint-order="stroke">いま ' + formatInt(pos) + 'm</text>' +
     '</svg>';
+}
+
+// 13座の歩み。登頂済みは緑、いまの山は赤、これからの山は灰色の三角で並べる
+function climbTrackHtml(idx) {
+  const marks = CLIMB_PEAKS.map((p, i) => {
+    const color = i < idx ? 'var(--accent)' : i === idx ? 'var(--coral)' : 'var(--border-strong)';
+    const size = 10 + Math.round(8 * p.m / CLIMB_LAP_M);
+    return '<span title="' + escapeHtml(p.name) + ' ' + formatInt(p.m) + 'm" style="display:inline-block;width:0;height:0;' +
+      'border-left:' + (size * 0.6).toFixed(1) + 'px solid transparent;border-right:' + (size * 0.6).toFixed(1) + 'px solid transparent;' +
+      'border-bottom:' + size + 'px solid ' + color + ';"></span>';
+  }).join('');
+  return '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:2px;margin-top:12px;">' + marks + '</div>' +
+    '<p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;">' +
+    '<span>生駒山 642m</span><span>' + CLIMB_PEAKS.length + '座中 ' + idx + '座 登頂</span><span>エベレスト 8,849m</span></p>';
 }
 
 function renderWeightChallenge() {
@@ -2699,14 +2783,16 @@ function renderWeightChallenge() {
     ? '<p style="margin:0 0 4px;font-size:13px;color:var(--text-muted);">目安 あと約' + Math.max(1, Math.ceil(rest / avgPerDay)) + '回のトレーニングで山頂（直近30日の平均 1回' + formatInt(avgPerDay) + 'm）</p>'
     : '';
 
-  // 一覧は 次の山・いまの山・登頂済みの直近2つ（高い順）
-  const row = (label, p, color, weight) =>
-    '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:14px;color:' + color + ';font-weight:' + weight + ';">' +
-    '<span>' + label + ' ' + escapeHtml(p.name) + '</span><span>' + formatInt(p.m) + 'm</span></div>';
-  let list = '';
-  if (CLIMB_PEAKS[idx + 1]) list += row('⛳ 次', CLIMB_PEAKS[idx + 1], 'var(--text-muted)', 400);
-  list += row('⛰ いま', peak, 'var(--text)', 800);
-  for (let i = idx - 1; i >= Math.max(0, idx - 2); i--) list += row('✅', CLIMB_PEAKS[i], 'var(--green-text)', 400);
+  // 前の山頂（1座目は0m）から今の山頂までの進み具合
+  const fromM = idx > 0 ? CLIMB_PEAKS[idx - 1].m : 0;
+  const segPct = Math.max(0, Math.min(100, (pos - fromM) / (peak.m - fromM) * 100));
+  const segHtml =
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;font-size:12px;color:var(--text-muted);">' +
+      '<span>' + (idx > 0 ? '✅ ' + escapeHtml(CLIMB_PEAKS[idx - 1].name) + ' ' + formatInt(fromM) + 'm' : 'ふもと 0m') + '</span>' +
+      '<span style="font-size:15px;font-weight:800;color:var(--accent-text);">' + Math.floor(segPct) + '%</span>' +
+      '<span>🚩 ' + escapeHtml(peak.name) + ' ' + formatInt(peak.m) + 'm</span></div>' +
+    '<div style="height:10px;border-radius:5px;background:var(--border);overflow:hidden;margin-top:4px;">' +
+      '<div style="height:100%;width:' + segPct.toFixed(1) + '%;background:var(--accent);border-radius:5px;"></div></div>';
 
   el.innerHTML =
     '<p style="margin:0 0 4px;font-size:17px;font-weight:800;">' +
@@ -2714,8 +2800,9 @@ function renderWeightChallenge() {
     '<p style="margin:0 0 4px;font-size:14px;color:var(--text-secondary);">標高 ' + formatInt(pos) + 'm ・ 山頂まで あと' + formatInt(rest) + 'm' +
       (weekM > 0 ? ' ・ 今週 +' + formatInt(weekM) + 'm' : '') + '</p>' +
     etaHtml +
-    climbMountainSvg(peak, pos) +
-    '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' + list + '</div>' +
+    climbMountainSvg(idx, pos) +
+    segHtml +
+    climbTrackHtml(idx) +
     '<p style="margin:8px 0 0;font-size:12px;color:var(--text-muted);">総重量 ' + formatInt(totalKg) + 'kg ・ 重さ×回数×' + CLIMB_STROKE_M + 'm÷体重（自重は1回' + CLIMB_BODY_REP_M + 'm）で換算</p>';
 }
 
