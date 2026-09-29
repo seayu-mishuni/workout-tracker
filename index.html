@@ -1469,7 +1469,7 @@ function renderTodayPlanCard() {
           '<div style="font-size:15px;font-weight:700;color:var(--text-secondary);">' + (it.s.time ? it.s.time + '〜' : '—') + '</div>' +
           (it.s.completed ? '<span class="badge" style="display:inline-block;font-size:12px;padding:2px 8px;margin-top:3px;">実施済</span>' : '') +
           '</div>' +
-          '<span style="flex:1;min-width:0;font-weight:800;font-size:18px;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
+          '<span style="flex:1;min-width:0;font-weight:800;font-size:18px;overflow-wrap:break-word;' + (it.s.completed ? 'color:var(--text-muted);' : '') + '">' + escapeHtml(it.plan.name) + '</span>' +
           '</div>' +
           footer +
           '</div>';
