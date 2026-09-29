@@ -165,6 +165,7 @@
   nav .inner { display: flex; width: 100%; max-width: 480px; }
   nav .tab {
     flex: 1; text-align: center; padding: 10px 0; color: var(--text-muted); cursor: pointer;
+    touch-action: manipulation;
   }
   nav .tab.active { color: var(--accent); }
   nav .tab .ic { font-size: 25px; display: block; }
@@ -4317,6 +4318,21 @@ document.querySelectorAll('nav .tab').forEach(tab => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     showScreen(tab.dataset.screen);
+  });
+});
+
+/* ---------- タブを2回タップで画面上部へ ---------- */
+
+let lastTabTap = { name: null, time: 0 };
+document.querySelectorAll('nav .tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const name = tab.dataset.screen, now = Date.now();
+    if (lastTabTap.name === name && now - lastTabTap.time < 500) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lastTabTap = { name: null, time: 0 };
+    } else {
+      lastTabTap = { name, time: now };
+    }
   });
 });
 
