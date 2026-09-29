@@ -286,6 +286,8 @@
     <section id="screen-progress" class="screen active">
       <div class="card" id="today-plan-card"></div>
 
+      <div class="card" id="sleep-hp-card"></div>
+
       <div class="card">
         <p class="field-label" id="res-last-label" style="margin-bottom:8px;">前回のトレ</p>
         <div id="res-last-training">-</div>
@@ -1399,6 +1401,7 @@ function renderTrainingResults() {
   if (!calendarViewMonth) calendarViewMonth = todayStr().slice(0, 7);
   if (!selectedResultDate) selectedResultDate = todayStr();
   renderTodayPlanCard();
+  renderSleepHp();
   renderResultsCalendar();
   renderDayDetail();
   renderResultsSummary();
@@ -2296,6 +2299,34 @@ function renderResultsBodyChart() {
   const avgFat = avg(fatVals);
   document.getElementById('res-body-avg-weight').innerHTML = (avgWeight != null ? avgWeight : '-') + '<span class="unit">kg</span>';
   document.getElementById('res-body-avg-fat').innerHTML = (avgFat != null ? avgFat : '-') + '<span class="unit">%</span>';
+}
+
+// 昨夜の睡眠を「HP」として表示する。日付は起床日として扱う
+const SLEEP_TARGET_H = 6;
+function renderSleepHp() {
+  const el = document.getElementById('sleep-hp-card');
+  if (!el) return;
+  const log = sleepLogs.find(s => s.date === todayStr() && s.hours != null);
+  let head, pct, msg;
+  if (!log) {
+    head = '<p style="margin:0;font-size:14px;color:var(--text-muted);">未入力</p>';
+    pct = 0;
+    msg = '「からだ」タブで昨夜の睡眠を入力できます';
+  } else {
+    const hp = Math.min(100, Math.round(log.hours / SLEEP_TARGET_H * 100));
+    head = '<p style="margin:0;font-size:17px;font-weight:700;">' + hp + '% <span style="font-size:13px;font-weight:400;color:var(--text-muted);">' + formatHm(log.hours) + '</span></p>';
+    pct = hp;
+    msg = hp >= 100 ? '好調。自己ベストを狙える日です'
+      : hp >= 80 ? 'いつも通りのメニューで'
+      : hp >= 60 ? 'やや疲労。重量は据え置き、ボリュームは控えめに'
+      : '休養も選択肢。軽めに';
+  }
+  el.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+      '<p style="margin:0;font-size:13px;color:var(--text-muted);">睡眠HP</p>' + head + '</div>' +
+    '<div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin:10px 0;">' +
+      '<div style="height:100%;width:' + pct + '%;background:var(--accent);border-radius:3px;"></div></div>' +
+    '<p style="margin:0;font-size:14px;color:var(--text-muted);">' + msg + '</p>';
 }
 
 function renderResultsSleepChart() {
