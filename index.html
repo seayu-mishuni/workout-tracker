@@ -333,6 +333,16 @@
       </div>
 
       <div class="card">
+        <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
+        <div id="res-assessment"></div>
+      </div>
+
+      <div class="card">
+        <p class="field-label" style="margin-bottom:8px;">⛰ 重量クライム（持ち上げた重さで山を登る）</p>
+        <div id="weight-challenge-body"></div>
+      </div>
+
+      <div class="card">
         <p class="field-label" style="margin-bottom:8px;">体重・体脂肪の推移</p>
         <div class="row" style="margin-bottom:10px;">
           <div class="stat"><p>平均体重(直近30日)</p><p id="res-body-avg-weight">-<span class="unit">kg</span></p></div>
@@ -390,16 +400,6 @@
       <div class="card">
         <p class="field-label" style="margin-bottom:8px;">🗾 東海道ラン（枚方宿 → 江戸・日本橋）</p>
         <div id="res-run-trip">-</div>
-      </div>
-
-      <div class="card">
-        <p class="field-label" style="margin-bottom:8px;">⛰ 重量クライム（持ち上げた重さで山を登る）</p>
-        <div id="weight-challenge-body"></div>
-      </div>
-
-      <div class="card">
-        <p class="field-label" id="res-assessment-label" style="margin-bottom:4px;">今月の総合評価</p>
-        <div id="res-assessment"></div>
       </div>
 
       <div class="card">
@@ -2222,12 +2222,12 @@ function trendChartSvg(series) {
   for (let v = lo, guard = 0; v <= hi + tickStep / 100 && guard < 12; v += tickStep, guard++) {
     const yy = y(v);
     grid += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (w - padR) + '" y2="' + yy + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>' +
-      '<text x="' + (padL - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + round1(v) + '</text>';
+      '<text x="' + (padL - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="14" font-weight="800" fill="var(--text-secondary)">' + round1(v) + '</text>';
   }
   const mdLabel = d => parseInt(d.slice(5, 7), 10) + '/' + parseInt(d.slice(8, 10), 10);
-  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(points[0].date) + '</text>';
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(points[0].date) + '</text>';
   if (points.length > 1) {
-    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(points[points.length - 1].date) + '</text>';
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(points[points.length - 1].date) + '</text>';
   }
 
   const linePath = smoothPath(coords);
@@ -3265,7 +3265,7 @@ function bodyDualChartSvg(logs) {
   if (fats.length > 0) [fLo, fHi] = paddedRange(Math.min(...fats), Math.max(...fats));
   function weightGridLine(v, y) {
     grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
-    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + v + '</text>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="14" font-weight="800" fill="var(--text-secondary)">' + v + '</text>';
   }
   weightGridLine(round1(wHi), padT);
   weightTicks(wLo, wHi).forEach(v => weightGridLine(v, wy(v)));
@@ -3274,15 +3274,15 @@ function bodyDualChartSvg(logs) {
     [0, 0.5, 1].forEach(t => {
       const y = padT + plotH * t;
       const fVal = round1(fHi - (fHi - fLo) * t);
-      grid += '<text x="' + (w - padR + 8) + '" y="' + (y + 4) + '" text-anchor="start" font-size="12" font-weight="600" fill="var(--text-muted)">' + fVal + '</text>';
+      grid += '<text x="' + (w - padR + 8) + '" y="' + (y + 4) + '" text-anchor="start" font-size="14" font-weight="800" fill="var(--text-secondary)">' + fVal + '</text>';
     });
   }
 
   // 日付（最初と最後）
   const first = logs[0], lastLog = logs[logs.length - 1];
-  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(first.date) + '</text>';
   if (logs.length > 1) {
-    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(lastLog.date) + '</text>';
   }
 
   const weightCoords = logs.map((l, i) => ({ x: xScale(l.date), y: wy(l.weight) }));
@@ -3390,13 +3390,13 @@ function sleepDualChartSvg(logs) {
     const y = padT + plotH * t;
     const hVal = round1(hHi - (hHi - hLo) * t);
     grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
-    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + hVal + '</text>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="14" font-weight="800" fill="var(--text-secondary)">' + hVal + '</text>';
   });
 
   const first = logs[0], lastLog = logs[logs.length - 1];
-  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(first.date) + '</text>';
   if (logs.length > 1) {
-    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(lastLog.date) + '</text>';
   }
 
   const showDots = logs.length <= 20;
@@ -3436,7 +3436,7 @@ function stepsChartSvg(logs) {
   if (logs.length === 0) return '<div class="empty">データがありません</div>';
   bodyChartInstanceCounter++;
   const gradId = 'stepsGrad' + bodyChartInstanceCounter;
-  const w = 360, h = 210, padL = 40, padR = 20, padT = 24, padB = 34;
+  const w = 360, h = 210, padL = 56, padR = 20, padT = 24, padB = 34;
   const plotH = h - padT - padB;
   const stepsList = logs.map(l => l.steps);
 
@@ -3459,13 +3459,13 @@ function stepsChartSvg(logs) {
     const y = padT + plotH * t;
     const sVal = Math.round(sHi - (sHi - sLo) * t);
     grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>';
-    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-weight="600" fill="var(--text-muted)">' + formatInt(sVal) + '</text>';
+    grid += '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="14" font-weight="800" fill="var(--text-secondary)">' + formatInt(sVal) + '</text>';
   });
 
   const first = logs[0], lastLog = logs[logs.length - 1];
-  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="13" fill="var(--text-muted)">' + mdLabel(first.date) + '</text>';
+  grid += '<text x="' + padL + '" y="' + (h - 8) + '" text-anchor="start" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(first.date) + '</text>';
   if (logs.length > 1) {
-    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="13" fill="var(--text-muted)">' + mdLabel(lastLog.date) + '</text>';
+    grid += '<text x="' + (w - padR) + '" y="' + (h - 8) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text-secondary)">' + mdLabel(lastLog.date) + '</text>';
   }
 
   const showDots = logs.length <= 20;
