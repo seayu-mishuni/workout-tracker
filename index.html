@@ -1464,9 +1464,12 @@ function renderTodayPlanCard() {
         const lastItem = j === e.items.length - 1;
         return '<div style="' + (lastItem ? '' : 'padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed var(--border);') + '">' +
           '<div style="display:flex;align-items:center;gap:8px;margin:0 0 ' + (footer ? '10px' : '0') + ';">' +
-          '<span style="flex-shrink:0;width:62px;font-size:15px;font-weight:700;color:var(--text-secondary);">' + (it.s.time ? it.s.time + '〜' : '—') + '</span>' +
+          // 実施済バッジは時刻の下に縦積み（名前の幅が実施済でも変わらず、2行に折り返さない）
+          '<div style="flex-shrink:0;width:62px;">' +
+          '<div style="font-size:15px;font-weight:700;color:var(--text-secondary);">' + (it.s.time ? it.s.time + '〜' : '—') + '</div>' +
+          (it.s.completed ? '<span class="badge" style="display:inline-block;font-size:12px;padding:2px 8px;margin-top:3px;">実施済</span>' : '') +
+          '</div>' +
           '<span style="flex:1;min-width:0;font-weight:800;font-size:18px;overflow-wrap:break-word;">' + escapeHtml(it.plan.name) + '</span>' +
-          (it.s.completed ? '<span class="badge" style="flex-shrink:0;">実施済</span>' : '') +
           '</div>' +
           footer +
           '</div>';
