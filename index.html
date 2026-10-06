@@ -4129,9 +4129,31 @@ function completePlanRun() {
 }
 
 // 全セットを消化していなくても、その時点までの滞在時間として記録して終了する
+// 屋外ランは走り終えてそのままチェックアウトすることが多いので、未入力のランのセットはここで記録する
+// （ランだけのプランならチェックインからの経過時間、ジムと混在なら目標時間を走った時間とみなす）
 function checkoutPlan() {
-  const remaining = activeRun.queue.length - activeRun.doneIndices.length;
-  if (remaining > 0 && !confirm('未実施の' + remaining + 'セットを残して終了し、トレ時間を記録します。よろしいですか？')) return;
+  const remainingItems = remainingQueueItems();
+  const runItems = remainingItems.filter(r => r.item.type === 'run');
+  const runOnly = activeRun.queue.every(q => q.type === 'run');
+  const elapsedMin = Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 60000));
+  const runDuration = r => runOnly ? Math.round(elapsedMin / runItems.length) : r.item.duration;
+  const runToRecord = runItems.filter(r => runDuration(r));
+  const otherCount = remainingItems.length - runToRecord.length;
+  const msgs = [];
+  if (runToRecord.length > 0) msgs.push('🏃 ' + runToRecord[0].item.name + 'を' + runToRecord.map(runDuration).reduce((s, d) => s + d, 0) + '分として記録します。');
+  if (otherCount > 0) msgs.push('未実施の' + otherCount + 'セットを残して終了し、トレ時間を記録します。');
+  if (msgs.length > 0 && !confirm(msgs.join('\n') + '\nよろしいですか？')) return;
+  runToRecord.forEach(r => {
+    const t = activeRun.date || todayStr();
+    let entry = workoutLogs.find(l => l.date === t && l.exercise === r.item.name && l.type === 'run' && l.runId === activeRun.startedAt);
+    if (!entry) {
+      entry = { id: uid(), date: t, exercise: r.item.name, type: 'run', sets: [], runId: activeRun.startedAt };
+      workoutLogs.push(entry);
+    }
+    entry.sets.push({ duration: runDuration(r), distance: r.item.distance || null });
+    activeRun.doneIndices.push(r.i);
+  });
+  if (runToRecord.length > 0) saveWorkoutLogs();
   completePlanRun();
 }
 
