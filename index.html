@@ -1291,11 +1291,60 @@ function selectResultDay(dateStr) {
 function renderDayDetail() {
   const logs = workoutLogs.filter(l => l.date === selectedResultDate);
   const label = fmtDateLabel(selectedResultDate);
+  // 記録が無く予定がある日（先の日付など）は、予定しているプランの中身を見せる
+  if (logs.length === 0) {
+    const items = scheduledPlans
+      .filter(s => s.date === selectedResultDate)
+      .sort(compareSchedule)
+      .map(s => ({ s, plan: plans.find(p => p.id === s.planId) }))
+      .filter(x => x.plan);
+    if (items.length > 0) {
+      document.getElementById('res-day-detail').innerHTML =
+        '<p class="field-label" style="margin-bottom:8px;">' + label + 'の予定</p>' +
+        items.map(it =>
+          '<div class="card">' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          (it.s.time ? '<span style="font-size:15px;font-weight:700;color:var(--text-secondary);">' + it.s.time + '〜</span>' : '') +
+          '<span style="font-weight:800;font-size:18px;">' + escapeHtml(it.plan.name) + '</span>' +
+          (it.s.completed ? '<span class="badge" style="font-size:12px;padding:2px 8px;">実施済</span>' : '') +
+          '</div>' +
+          (it.plan.gym ? '<p style="font-size:15px;color:var(--text-muted);margin:4px 0 0;">🏢 ' + escapeHtml(it.plan.gym) + '</p>' : '') +
+          it.plan.exercises.map(ex =>
+            '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px dashed var(--border);margin-top:8px;">' +
+            '<span style="font-size:17px;">' + escapeHtml(ex.name) + '</span>' +
+            '<span style="font-size:15px;color:var(--text-secondary);flex-shrink:0;">' + planExerciseTargetText(ex) + '</span>' +
+            '</div>'
+          ).join('') +
+          '</div>'
+        ).join('');
+      return;
+    }
+  }
   const caloriesHtml = logs.length === 0 ? '' :
     '<span style="float:right;font-weight:700;color:var(--text-secondary);">🔥 ' + formatInt(estimateCalories(logs, selectedResultDate)) + '<span class="unit">kcal</span></span>';
   document.getElementById('res-day-detail').innerHTML =
     '<p class="field-label" style="margin-bottom:8px;overflow:hidden;">' + label + 'の記録' + caloriesHtml + '</p>' +
     (logs.length === 0 ? '<div class="empty">この日の記録はありません</div>' : exerciseCardsHtml(logs));
+}
+
+// プランの種目の目標（0や未入力の項目は省く）
+function planExerciseTargetText(ex) {
+  const parts = [];
+  if (ex.type === 'run') {
+    if (ex.duration) parts.push(ex.duration + '分');
+    if (ex.distance) parts.push(ex.distance + 'km');
+    return parts.join('・');
+  }
+  if (ex.type === 'cardio') {
+    if (ex.duration) parts.push(ex.duration + '分');
+    if (ex.speed) parts.push(ex.speed + 'km/h');
+    if (ex.incline) parts.push('傾斜' + ex.incline + '%');
+    return parts.join('・');
+  }
+  if (ex.setCount) parts.push(ex.setCount + 'セット');
+  if (ex.type !== 'reps' && ex.weight) parts.push(ex.weight + 'kg');
+  if (ex.reps) parts.push(ex.reps + '回');
+  return parts.join(' × ');
 }
 
 function nthMondayOfMonth(year, month, n) {
